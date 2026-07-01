@@ -1,5 +1,5 @@
 {
-  "name": "kibclass_backend",
+  "name": "kidclass_backend",
   "version": "1.0.0",
   "description": "Production-ready LMS backend for KidClass.",
   "main": "dist/server.js",
