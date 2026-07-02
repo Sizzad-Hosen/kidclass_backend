@@ -5,7 +5,6 @@ import { Lesson } from '../lessons/lesson.model';
 import { Milestone } from '../milestones/milestone.model';
 import { CourseModule } from '../modules/module.model';
 import { Quiz } from '../quizzes/quiz.model';
-import { User } from '../users/user.model';
 import { AppError } from '../../utils/AppError';
 import { CourseCreatePayload, CourseUpdatePayload } from './course.interface';
 import { Course } from './course.model';
@@ -17,16 +16,6 @@ const ensureCourseOwnership = async (courseId: string, userId: string) => {
 
   if (!course) {
     throw new AppError(httpStatus.NOT_FOUND, 'Course not found');
-  }
-
-  if (course.courseManager.toString() !== userId) {
-    const user = await User.findById(userId).select('role');
-
-    if (user?.role === 'admin') {
-      return course;
-    }
-
-    throw new AppError(httpStatus.FORBIDDEN, 'You can only manage your own courses');
   }
 
   return course;

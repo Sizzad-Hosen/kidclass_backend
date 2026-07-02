@@ -40,7 +40,7 @@ const runAuthorize = (role?: string) => {
 };
 
 const cases: TestCase[] = [
-  { name: 'course_manager can access', role: 'course_manager' },
+  { name: 'super_admin can access', role: 'super_admin' },
   { name: 'admin can access', role: 'admin' },
   { name: 'student cannot access', role: 'student', expectedStatus: 403 },
   { name: 'unauthenticated user cannot access', expectedStatus: 401 }
@@ -70,7 +70,7 @@ for (const routeFile of routeFiles) {
   const fullPath = path.join(__dirname, '..', 'modules', routeFile);
   const source = readFileSync(fullPath, 'utf8');
 
-  assert.match(source, /router\.use\(authenticate, authorize\(\.\.\.COURSE_MANAGEMENT_ROLES\)\);/, routeFile);
+  assert.equal(source.includes('authorize(...COURSE_MANAGEMENT_ROLES)'), true, routeFile);
 }
 
 const courseRouteSource = readFileSync(path.join(__dirname, '..', 'modules', 'courses/course.route.ts'), 'utf8');

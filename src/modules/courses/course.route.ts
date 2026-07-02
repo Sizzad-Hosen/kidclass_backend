@@ -24,8 +24,8 @@ router.use(authenticate, authorize(...COURSE_MANAGEMENT_ROLES));
 
 router.post('/', validateRequest(createCourseValidationSchema), CourseController.createCourse);
 router.patch('/:courseId', validateRequest(updateCourseValidationSchema), CourseController.updateCourse);
-router.patch('/:courseId/publish', authorize('admin'), validateRequest(courseIdParamValidationSchema), CourseController.publishCourse);
-router.patch('/:courseId/archive', authorize('admin'), validateRequest(courseIdParamValidationSchema), CourseController.archiveCourse);
+router.patch('/:courseId/publish', validateRequest(courseIdParamValidationSchema), CourseController.publishCourse);
+router.patch('/:courseId/archive', validateRequest(courseIdParamValidationSchema), CourseController.archiveCourse);
 router.delete('/:courseId', validateRequest(courseIdParamValidationSchema), CourseController.deleteCourse);
 
 export const CourseRoutes = router;

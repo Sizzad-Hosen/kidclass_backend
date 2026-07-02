@@ -3,7 +3,6 @@ import { Types } from 'mongoose';
 import { AppError } from '../../utils/AppError';
 import { Assignment } from '../assignments/assignment.model';
 import { AssignmentSubmission } from '../assignments/assignmentSubmission.model';
-import { CourseService } from '../courses/course.service';
 import { COURSE_MANAGEMENT_ROLES } from '../courses/course.constant';
 import { Enrollment } from '../enrollments/enrollment.model';
 import { Lesson } from '../lessons/lesson.model';
@@ -66,10 +65,6 @@ const ensureEnrollmentAccess = async (enrollmentId: string, userId: string, role
     throw new AppError(httpStatus.FORBIDDEN, 'You can only access your own progress');
   }
 
-  if (role === 'course_manager') {
-    await CourseService.ensureCourseOwnership(enrollment.course.toString(), userId);
-  }
-
   return enrollment;
 };
 
@@ -80,6 +75,30 @@ const updateLessonProgress = async (
 ) => {
   const courseId = await getLessonCourseId(lessonId);
   const enrollment = await getActiveEnrollment(courseId, studentId);
+  const lesson = await Lesson.findById(lessonId);
+
+  if (!lesson) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Lesson not found');
+  }
+
+  if (payload.status !== 'not-started' && lesson.order > 1) {
+    const previousLesson = await Lesson.findOne({
+      module: lesson.module,
+      order: lesson.order - 1
+    }).select('_id');
+
+    if (previousLesson) {
+      const previousProgress = await Progress.findOne({
+        enrollment: enrollment._id,
+        lesson: previousLesson._id,
+        status: 'completed'
+      });
+
+      if (!previousProgress) {
+        throw new AppError(httpStatus.FORBIDDEN, 'Previous lesson must be completed before this lesson unlocks');
+      }
+    }
+  }
 
   return Progress.findOneAndUpdate(
     { enrollment: enrollment._id, lesson: lessonId },

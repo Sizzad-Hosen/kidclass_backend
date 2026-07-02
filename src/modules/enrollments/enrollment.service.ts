@@ -52,10 +52,6 @@ const getEnrollmentById = async (enrollmentId: string, userId: string, role: str
     throw new AppError(httpStatus.FORBIDDEN, 'You can only access your own enrollment');
   }
 
-  if (role === 'course_manager') {
-    await CourseService.ensureCourseOwnership(enrollment.course._id.toString(), userId);
-  }
-
   return enrollment;
 };
 

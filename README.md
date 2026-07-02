@@ -1,73 +1,41 @@
-# KidClass Backend
+# KidClass Backend API
 
-KidClass Backend is a TypeScript, Express, and MongoDB API for a Kids LMS academic project. It supports authentication, course content management, student enrollment, progress tracking, assignment submission, and certificate eligibility/generation workflows.
+KidClass is a Kids LMS backend for Class 1-3 students. It is designed for simple, guided learning where students can view published courses, continue lessons after login, unlock lessons step by step, submit final assignments, track progress, and earn certificates.
 
 ## Purpose
 
-This project solves the backend needs for a small learning management system where:
+The project solves early-childhood LMS problems:
 
-- admins can publish/archive courses and manage platform-level certificate records,
-- course managers can create and maintain their own course content,
-- students can enroll in published courses, complete lessons, submit final assignments, and receive certificates after meeting requirements,
-- certificates can be verified publicly by certificate number.
+- students need a simple learning path,
+- lessons should unlock in order,
+- students should not access assignment actions without login,
+- admins need clean course/content management APIs,
+- certificates should be issued only after real completion,
+- certificates should be publicly verifiable.
 
 ## Tech Stack
 
-| Area | Technology |
-| --- | --- |
-| Runtime | Node.js |
-| Framework | Express.js |
-| Language | TypeScript |
-| Database | MongoDB |
-| ODM | Mongoose |
-| Validation | Zod |
-| Authentication | JWT access and refresh tokens |
-| Password hashing | bcryptjs |
-| File upload | Multer |
-| Image storage | Cloudinary |
-| Security middleware | Helmet, CORS |
-| Logging | Morgan |
+- Node.js
+- Express.js
+- TypeScript
+- MongoDB
+- Mongoose
+- Zod
+- JWT
+- bcryptjs
+- Multer
+- Cloudinary
+- Helmet
+- CORS
+- Morgan
 
-## Current Roles
+## Roles
 
-The codebase currently uses three roles:
+- `super_admin`: highest platform admin.
+- `admin`: manages LMS content, users, assignments, and certificates.
+- `student`: enrolls, learns, submits assignments, tracks progress, and earns certificates.
 
-| Role | Access |
-| --- | --- |
-| `admin` | Publish/archive courses, manage all courses through ownership bypass, manage certificates , Manage only their own courses, milestones, modules, lessons, quizzes, and assignments |
-| `student` | Register/login, enroll in published courses, submit assignments, update own progress, generate eligible certificates |
-
-`superadmin` is not used in this codebase.
-
-## Main Features
-
-- Student registration and login.
-- JWT access-token and refresh-token flow.
-- Forgot/reset password token generation.
-- Public published course listing and course details.
-- Course manager CRUD for courses and course structure.
-- Milestone, module, lesson, quiz, and assignment CRUD.
-- Final milestone assignment restriction.
-- Assignment submissions with writing, picture upload/file URL, and quiz-style answers.
-- Student course enrollment.
-- Lesson progress tracking.
-- Course progress summary across lessons, quizzes, and final assignment.
-- Certificate eligibility checks.
-- Certificate generation with duplicate prevention.
-- Certificate edit/delete for admin or owning course manager.
-- Public certificate verification.
-
-## Problems Solved
-
-- Prevents students from managing LMS content.
-- Prevents course managers from editing courses they do not own.
-- Keeps draft courses hidden from public course APIs.
-- Blocks certificate generation until all requirements are met.
-- Prevents duplicate certificates for the same enrollment.
-- Allows public certificate validation without requiring login.
-- Standardizes request validation and API responses.
-
-## Clone And Installation
+## Clone And Install
 
 ```bash
 git clone https://github.com/Sizzad-Hosen/kidclass_backend.git
@@ -75,9 +43,9 @@ cd kidclass_backend
 npm install
 ```
 
-## Environment Setup
+## Environment Variables
 
-Create a `.env` file in the project root:
+Create `.env`:
 
 ```env
 NODE_ENV=development
@@ -94,53 +62,33 @@ CLOUDINARY_API_KEY=
 CLOUDINARY_API_SECRET=
 ```
 
-Cloudinary values are required only when uploading assignment pictures as files. Submissions can also use `fileUrl`.
-
-## Run The Backend
-
-Development:
+## Run
 
 ```bash
 npm run dev
-```
-
-Build:
-
-```bash
 npm run build
-```
-
-Production:
-
-```bash
 npm start
 ```
 
-Health check:
+Health:
 
 ```txt
 GET /health
 ```
 
-Base API URL:
+Base API:
 
 ```txt
 /api/v1
 ```
 
-## Scripts
+## Authentication Header
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Start dev server with `ts-node-dev` |
-| `npm run build` | Compile TypeScript to `dist` |
-| `npm start` | Run compiled server |
-| `npm run lint` | Type-check without emitting files |
-| `npm run test:course-auth` | Run route/role guard regression test |
+```txt
+Authorization: Bearer <accessToken>
+```
 
-## API Response Format
-
-Success:
+## Response Format
 
 ```json
 {
@@ -150,8 +98,6 @@ Success:
 }
 ```
 
-Error:
-
 ```json
 {
   "success": false,
@@ -160,252 +106,796 @@ Error:
 }
 ```
 
-## Authentication
+## Auth APIs
 
-Protected endpoints require:
+### Register Student
 
 ```txt
-Authorization: Bearer <accessToken>
+POST /api/v1/auth/register
 ```
 
-### Auth Endpoints
+```json
+{
+  "name": "Student One",
+  "email": "student@example.com",
+  "password": "password123"
+}
+```
 
-| Method | Endpoint | Access | Purpose |
-| --- | --- | --- | --- |
-| `POST` | `/api/v1/auth/register` | Public | Register a student |
-| `POST` | `/api/v1/auth/login` | Public | Login and receive access/refresh tokens |
-| `POST` | `/api/v1/auth/forgot-password` | Public | Generate password reset token |
-| `POST` | `/api/v1/auth/reset-password` | Public | Reset password using reset token |
-| `POST` | `/api/v1/auth/refresh-token` | Public | Rotate access/refresh tokens |
-| `POST` | `/api/v1/auth/logout` | Authenticated | Client-side token discard response |
-| `GET` | `/api/v1/auth/me` | Authenticated | Fetch current profile |
+### Login
 
-## Course APIs
+```txt
+POST /api/v1/auth/login
+```
 
-Published course reads are public. Management routes require `admin` or `course_manager`.
+```json
+{
+  "email": "student@example.com",
+  "password": "password123"
+}
+```
 
-| Method | Endpoint | Access |
-| --- | --- | --- |
-| `GET` | `/api/v1/courses` | Public, published only |
-| `GET` | `/api/v1/courses/:courseId` | Public, published only |
-| `GET` | `/api/v1/courses/:courseId/details` | Public, published only |
-| `GET` | `/api/v1/courses/:courseId/structure` | Public, published only |
-| `POST` | `/api/v1/courses` | Admin, Course Manager |
-| `PATCH` | `/api/v1/courses/:courseId` | Admin, owning Course Manager |
-| `PATCH` | `/api/v1/courses/:courseId/publish` | Admin |
-| `PATCH` | `/api/v1/courses/:courseId/archive` | Admin |
-| `DELETE` | `/api/v1/courses/:courseId` | Admin, owning Course Manager |
+### Refresh Token
+
+```txt
+POST /api/v1/auth/refresh-token
+```
+
+```json
+{
+  "refreshToken": "jwt_refresh_token"
+}
+```
+
+### Forgot Password
+
+```txt
+POST /api/v1/auth/forgot-password
+```
+
+```json
+{
+  "email": "student@example.com"
+}
+```
+
+### Reset Password
+
+```txt
+POST /api/v1/auth/reset-password
+```
+
+```json
+{
+  "token": "reset_token",
+  "password": "newPassword123"
+}
+```
+
+### Logout
+
+```txt
+POST /api/v1/auth/logout
+```
+
+No body.
+
+### Me
+
+```txt
+GET /api/v1/auth/me
+```
+
+No body.
+
+## User Management APIs
+
+Admin/Super Admin only.
+
+### Get Users
+
+```txt
+GET /api/v1/users
+```
+
+No body.
+
+### Get User
+
+```txt
+GET /api/v1/users/:userId
+```
+
+No body.
+
+### Create User
+
+```txt
+POST /api/v1/users
+```
+
+```json
+{
+  "name": "Admin User",
+  "email": "admin@example.com",
+  "password": "password123",
+  "role": "admin",
+  "isActive": true
+}
+```
+
+### Update User
+
+```txt
+PATCH /api/v1/users/:userId
+```
+
+```json
+{
+  "name": "Updated Name",
+  "role": "student",
+  "isActive": true
+}
+```
+
+### Delete User
+
+```txt
+DELETE /api/v1/users/:userId
+```
+
+No body.
+
+## Course Management APIs
+
+Published course reads are public. Create/update/delete/publish/archive are admin/super_admin.
+
+### Get Published Courses
+
+```txt
+GET /api/v1/courses
+```
+
+No body.
+
+### Get Published Course
+
+```txt
+GET /api/v1/courses/:courseId
+```
+
+No body.
+
+### Get Course Details
+
+```txt
+GET /api/v1/courses/:courseId/details
+```
+
+No body.
+
+### Get Course Structure
+
+```txt
+GET /api/v1/courses/:courseId/structure
+```
+
+No body.
+
+### Create Course
+
+```txt
+POST /api/v1/courses
+```
+
+```json
+{
+  "title": "Class 1 English Basics",
+  "description": "Fun English learning for Class 1 students",
+  "thumbnailImage": "https://example.com/thumb.jpg",
+  "price": 0,
+  "category": "english",
+  "isPublished": false
+}
+```
+
+### Update Course
+
+```txt
+PATCH /api/v1/courses/:courseId
+```
+
+```json
+{
+  "title": "Class 1 English Updated",
+  "price": 100,
+  "isPublished": false
+}
+```
+
+### Publish Course
+
+```txt
+PATCH /api/v1/courses/:courseId/publish
+```
+
+No body.
+
+### Archive Course
+
+```txt
+PATCH /api/v1/courses/:courseId/archive
+```
+
+No body.
+
+### Delete Course
+
+```txt
+DELETE /api/v1/courses/:courseId
+```
+
+No body.
 
 ## Milestone APIs
 
-| Method | Endpoint | Access |
-| --- | --- | --- |
-| `POST` | `/api/v1/milestones` | Admin, owning Course Manager |
-| `GET` | `/api/v1/milestones` | Admin, Course Manager |
-| `GET` | `/api/v1/milestones/:milestoneId` | Admin, Course Manager |
-| `PATCH` | `/api/v1/milestones/:milestoneId` | Admin, owning Course Manager |
-| `DELETE` | `/api/v1/milestones/:milestoneId` | Admin, owning Course Manager |
+Milestone GET routes require authentication only. Logged-in students can access these routes to continue the course flow. Create/update/delete routes are admin/super_admin only.
+
+### Get Milestones
+
+```txt
+GET /api/v1/milestones
+```
+
+Access: authenticated `student`, `admin`, `super_admin`.
+
+No body.
+
+### Get Milestone
+
+```txt
+GET /api/v1/milestones/:milestoneId
+```
+
+Access: authenticated `student`, `admin`, `super_admin`.
+
+No body.
+
+### Create Milestone
+
+```txt
+POST /api/v1/milestones
+```
+
+Access: `admin`, `super_admin`.
+
+```json
+{
+  "course": "64f000000000000000000001",
+  "title": "Alphabet Milestone",
+  "order": 1
+}
+```
+
+### Update Milestone
+
+```txt
+PATCH /api/v1/milestones/:milestoneId
+```
+
+Access: `admin`, `super_admin`.
+
+```json
+{
+  "title": "Updated Milestone",
+  "order": 2
+}
+```
+
+### Delete Milestone
+
+```txt
+DELETE /api/v1/milestones/:milestoneId
+```
+
+Access: `admin`, `super_admin`.
+
+No body.
 
 ## Module APIs
 
-| Method | Endpoint | Access |
-| --- | --- | --- |
-| `POST` | `/api/v1/modules` | Admin, owning Course Manager |
-| `GET` | `/api/v1/modules` | Admin, Course Manager |
-| `GET` | `/api/v1/modules/:moduleId` | Admin, Course Manager |
-| `PATCH` | `/api/v1/modules/:moduleId` | Admin, owning Course Manager |
-| `DELETE` | `/api/v1/modules/:moduleId` | Admin, owning Course Manager |
+Module GET routes require authentication only. Logged-in students can access these routes to continue the course flow. Create/update/delete routes are admin/super_admin only.
+
+### Get Modules
+
+```txt
+GET /api/v1/modules
+```
+
+Access: authenticated `student`, `admin`, `super_admin`.
+
+No body.
+
+### Get Module
+
+```txt
+GET /api/v1/modules/:moduleId
+```
+
+Access: authenticated `student`, `admin`, `super_admin`.
+
+No body.
+
+### Create Module
+
+```txt
+POST /api/v1/modules
+```
+
+Access: `admin`, `super_admin`.
+
+```json
+{
+  "milestone": "64f000000000000000000002",
+  "title": "Vowels",
+  "order": 1
+}
+```
+
+### Update Module
+
+```txt
+PATCH /api/v1/modules/:moduleId
+```
+
+Access: `admin`, `super_admin`.
+
+```json
+{
+  "title": "Updated Module",
+  "order": 2
+}
+```
+
+### Delete Module
+
+```txt
+DELETE /api/v1/modules/:moduleId
+```
+
+Access: `admin`, `super_admin`.
+
+No body.
 
 ## Lesson APIs
 
-| Method | Endpoint | Access |
-| --- | --- | --- |
-| `POST` | `/api/v1/lessons` | Admin, owning Course Manager |
-| `GET` | `/api/v1/lessons` | Admin, Course Manager |
-| `GET` | `/api/v1/lessons/:lessonId` | Admin, Course Manager |
-| `PATCH` | `/api/v1/lessons/:lessonId` | Admin, owning Course Manager |
-| `DELETE` | `/api/v1/lessons/:lessonId` | Admin, owning Course Manager |
+Lesson GET routes require authentication only. Logged-in students can access lessons to continue learning. Create/update/delete routes are admin/super_admin only. Lesson progress enforces unlock order inside each module.
+
+### Get Lessons
+
+```txt
+GET /api/v1/lessons
+```
+
+Access: authenticated `student`, `admin`, `super_admin`.
+
+No body.
+
+### Get Lesson
+
+```txt
+GET /api/v1/lessons/:lessonId
+```
+
+Access: authenticated `student`, `admin`, `super_admin`.
+
+No body.
+
+### Create Lesson
+
+```txt
+POST /api/v1/lessons
+```
+
+Access: `admin`, `super_admin`.
+
+```json
+{
+  "module": "64f000000000000000000003",
+  "order": 1,
+  "title": "Learn A",
+  "contentType": "video",
+  "duration": 300,
+  "videoUrl": "https://example.com/video.mp4",
+  "contentNotes": "Watch and repeat the sound A."
+}
+```
+
+### Update Lesson
+
+```txt
+PATCH /api/v1/lessons/:lessonId
+```
+
+Access: `admin`, `super_admin`.
+
+```json
+{
+  "title": "Learn Letter A",
+  "duration": 360
+}
+```
+
+### Delete Lesson
+
+```txt
+DELETE /api/v1/lessons/:lessonId
+```
+
+Access: `admin`, `super_admin`.
+
+No body.
 
 ## Quiz APIs
 
-| Method | Endpoint | Access |
-| --- | --- | --- |
-| `POST` | `/api/v1/quizzes` | Admin, owning Course Manager |
-| `GET` | `/api/v1/quizzes` | Admin, Course Manager |
-| `GET` | `/api/v1/quizzes/:quizId` | Admin, Course Manager |
-| `PATCH` | `/api/v1/quizzes/:quizId` | Admin, owning Course Manager |
-| `DELETE` | `/api/v1/quizzes/:quizId` | Admin, owning Course Manager |
+Quiz management is admin/super_admin. Quiz questions/options are embedded in the quiz document.
 
-Quiz questions and options are embedded inside the quiz document.
+### Get Quizzes
+
+```txt
+GET /api/v1/quizzes
+```
+
+No body.
+
+### Get Quiz
+
+```txt
+GET /api/v1/quizzes/:quizId
+```
+
+No body.
+
+### Create Quiz
+
+```txt
+POST /api/v1/quizzes
+```
+
+```json
+{
+  "module": "64f000000000000000000003",
+  "title": "Vowels Quiz",
+  "passingScore": 70,
+  "questions": [
+    {
+      "questionText": "Which one is a vowel?",
+      "points": 10,
+      "options": [
+        { "text": "A", "isCorrect": true },
+        { "text": "B", "isCorrect": false }
+      ]
+    }
+  ]
+}
+```
+
+### Update Quiz
+
+```txt
+PATCH /api/v1/quizzes/:quizId
+```
+
+```json
+{
+  "title": "Updated Quiz",
+  "passingScore": 80
+}
+```
+
+### Delete Quiz
+
+```txt
+DELETE /api/v1/quizzes/:quizId
+```
+
+No body.
 
 ## Assignment APIs
 
-| Method | Endpoint | Access |
-| --- | --- | --- |
-| `POST` | `/api/v1/assignments` | Admin, owning Course Manager |
-| `GET` | `/api/v1/assignments` | Admin, Course Manager |
-| `GET` | `/api/v1/assignments/:assignmentId` | Admin, Course Manager |
-| `PATCH` | `/api/v1/assignments/:assignmentId` | Admin, owning Course Manager |
-| `DELETE` | `/api/v1/assignments/:assignmentId` | Admin, owning Course Manager |
-| `POST` | `/api/v1/assignments/:assignmentId/submissions` | Student |
-| `GET` | `/api/v1/assignments/:assignmentId/submissions` | Admin, owning Course Manager |
-| `PATCH` | `/api/v1/assignments/:assignmentId/submissions/:studentId` | Admin, owning Course Manager |
+Assignment detail requires login so students can view their final work. Assignment creation is allowed only for the final milestone.
 
-Assignment supported parts:
+### Get Assignment
 
-```json
-["quiz", "writing", "picture"]
+```txt
+GET /api/v1/assignments/:assignmentId
 ```
 
-Student submission can send:
+No body.
 
-- `content`
-- `fileUrl`
-- `picture` multipart file
-- `answers` JSON array for embedded assignment quiz questions
+### Get Assignments
+
+```txt
+GET /api/v1/assignments
+```
+
+No body.
+
+### Create Assignment
+
+```txt
+POST /api/v1/assignments
+```
+
+```json
+{
+  "milestone": "64f000000000000000000002",
+  "module": "64f000000000000000000003",
+  "title": "Final Activity",
+  "instructions": "Answer the quiz, write one sentence, and upload a picture.",
+  "assessmentParts": ["quiz", "writing", "picture"],
+  "questions": [
+    {
+      "questionText": "Which one is letter A?",
+      "points": 10,
+      "options": [
+        { "text": "A", "isCorrect": true },
+        { "text": "C", "isCorrect": false }
+      ]
+    }
+  ],
+  "dueDate": "2026-08-01",
+  "points": 100
+}
+```
+
+### Update Assignment
+
+```txt
+PATCH /api/v1/assignments/:assignmentId
+```
+
+```json
+{
+  "title": "Updated Final Activity",
+  "points": 100
+}
+```
+
+### Delete Assignment
+
+```txt
+DELETE /api/v1/assignments/:assignmentId
+```
+
+No body.
+
+### Submit Assignment
+
+```txt
+POST /api/v1/assignments/:assignmentId/submissions
+```
+
+JSON example:
+
+```json
+{
+  "content": "This is my writing answer.",
+  "fileUrl": "https://example.com/my-picture.jpg",
+  "answers": [
+    {
+      "question": "64f000000000000000000010",
+      "selectedOptionIndexes": [0]
+    }
+  ]
+}
+```
+
+Multipart form-data example:
+
+```txt
+content=This is my writing answer.
+picture=<image file>
+answers=[{"question":"64f000000000000000000010","selectedOptionIndexes":[0]}]
+```
+
+### Get Assignment Submissions
+
+```txt
+GET /api/v1/assignments/:assignmentId/submissions
+```
+
+No body.
+
+### Grade Assignment Submission
+
+```txt
+PATCH /api/v1/assignments/:assignmentId/submissions/:studentId
+```
+
+```json
+{
+  "score": 80,
+  "totalPoints": 100
+}
+```
 
 ## Enrollment APIs
 
-| Method | Endpoint | Access |
-| --- | --- | --- |
-| `POST` | `/api/v1/enrollments` | Student |
-| `GET` | `/api/v1/enrollments/me` | Student |
-| `GET` | `/api/v1/enrollments/:enrollmentId` | Owner student, Admin, owning Course Manager |
-| `PATCH` | `/api/v1/enrollments/:enrollmentId/cancel` | Student owner |
+### Enroll In Course
+
+```txt
+POST /api/v1/enrollments
+```
+
+```json
+{
+  "course": "64f000000000000000000001"
+}
+```
+
+### My Enrollments
+
+```txt
+GET /api/v1/enrollments/me
+```
+
+No body.
+
+### Get Enrollment
+
+```txt
+GET /api/v1/enrollments/:enrollmentId
+```
+
+No body.
+
+### Cancel Enrollment
+
+```txt
+PATCH /api/v1/enrollments/:enrollmentId/cancel
+```
+
+No body.
 
 ## Progress APIs
 
-| Method | Endpoint | Access |
-| --- | --- | --- |
-| `PATCH` | `/api/v1/progress/lessons/:lessonId` | Student enrolled in course |
-| `GET` | `/api/v1/progress/courses/:courseId` | Student enrolled in course |
-| `GET` | `/api/v1/progress/enrollments/:enrollmentId` | Owner student, Admin, owning Course Manager |
+### Update Lesson Progress
 
-Progress is calculated from:
+```txt
+PATCH /api/v1/progress/lessons/:lessonId
+```
 
-- completed lessons,
-- passed quizzes,
-- passed final assignment.
+```json
+{
+  "status": "completed",
+  "watchedSeconds": 300
+}
+```
+
+Unlock rule: if the previous lesson in the same module is not completed, this API returns forbidden for `in-progress` or `completed`.
+
+### Course Progress By Course
+
+```txt
+GET /api/v1/progress/courses/:courseId
+```
+
+No body.
+
+### Course Progress By Enrollment
+
+```txt
+GET /api/v1/progress/enrollments/:enrollmentId
+```
+
+No body.
 
 ## Certificate APIs
 
-| Method | Endpoint | Access |
-| --- | --- | --- |
-| `GET` | `/api/v1/certificates/verify/:certificateNo` | Public |
-| `GET` | `/api/v1/certificates` | Authenticated |
-| `GET` | `/api/v1/certificates/:certificateId` | Owner student, Admin, owning Course Manager |
-| `GET` | `/api/v1/certificates/download/:certificateId` | Owner student, Admin, owning Course Manager |
-| `GET` | `/api/v1/certificates/enrollments/:enrollmentId/eligibility` | Owner student, Admin, owning Course Manager |
-| `POST` | `/api/v1/certificates/enrollments/:enrollmentId/generate` | Eligible owner student, Admin, owning Course Manager |
-| `PATCH` | `/api/v1/certificates/:certificateId` | Admin, owning Course Manager |
-| `DELETE` | `/api/v1/certificates/:certificateId` | Admin, owning Course Manager |
-
-Certificate generation requires:
-
-- all lessons completed,
-- all quizzes passed,
-- final assignment exists,
-- final assignment passed with at least 70 percent,
-- course is published,
-- certificate was not already issued.
-
-## Course Creation Flow
-
-1. Admin or course manager creates a course.
-2. Course manager adds milestones.
-3. Course manager adds modules under milestones.
-4. Course manager adds lessons and quizzes under modules.
-5. Course manager creates the final milestone assignment.
-6. Admin publishes the course.
-7. Students enroll in the published course.
-
-## Student Completion Flow
-
-1. Student enrolls in a published course.
-2. Student completes lessons through progress API.
-3. Student passes required quizzes.
-4. Student submits final assignment.
-5. Course manager grades assignment.
-6. Student checks certificate eligibility.
-7. Certificate is generated once requirements are complete.
-
-## Certificate Verification Flow
-
-1. Certificate is issued with a unique certificate number.
-2. Anyone can call:
+### Verify Certificate Publicly
 
 ```txt
 GET /api/v1/certificates/verify/:certificateNo
 ```
 
-3. The API returns certificate status and enrollment details.
+No body.
 
-## Quality And Architecture Review
-
-### Good Decisions
-
-- Modular folder structure by domain.
-- Zod request validation.
-- Centralized error handler.
-- JWT authentication middleware.
-- Course ownership checks in service layer.
-- Consistent success response helper.
-- Final assignment restricted to last milestone.
-- Certificate duplicate prevention.
-
-### Risks And Issues To Watch
-
-- No integration test database setup yet.
-- No seed command or demo users yet.
-- Admin user creation currently requires direct DB setup or extending auth/user APIs.
-- Quiz attempts are not modeled as a full lifecycle.
-- Certificate template builder is not implemented.
-- Certificate PDF and QR code generation are not implemented.
-- Some read APIs for management modules are broad admin/manager reads rather than scoped manager-only lists.
-- No rate limiting on auth endpoints.
-- Refresh tokens are stateless and not stored/revoked server-side.
-
-## Limitations
-
-- No frontend is included in this repository.
-- No database migrations are included; Mongoose creates collections/indexes from models.
-- No role CRUD module; roles are static enum values.
-- No course category CRUD; categories are static constants.
-- No report APIs.
-- No certificate template designer.
-- No PDF download generation; certificate download currently returns stored certificate metadata/URL.
-- No QR code generation.
-
-## Recommended Next Improvements
-
-1. Add user management APIs for admin.
-2. Add seed script for default admin/course manager/student.
-3. Add integration tests with a test MongoDB.
-4. Add quiz attempt lifecycle.
-5. Add certificate templates, PDF generation, and QR verification URL.
-6. Add report endpoints for completion, quiz performance, and assignment results.
-7. Add rate limiting and refresh-token revocation storage.
-
-## Academic QA Checklist
-
-- Register and login as student.
-- Login as admin and publish/archive a course.
-- Verify student cannot create course.
-- Verify course manager cannot edit another manager's course.
-- Create full course structure.
-- Enroll student in published course.
-- Complete lesson progress.
-- Submit assignment.
-- Grade assignment pass/fail.
-- Verify failed assignment blocks certificate.
-- Verify passed assignment unlocks certificate only after all requirements.
-- Verify duplicate certificate generation returns conflict.
-- Verify public certificate verification works without token.
-
-## Repository Status
-
-Main active branch for the latest work:
+### Get Certificates
 
 ```txt
-replace-superadmin-with-admin
+GET /api/v1/certificates
+```
+
+No body.
+
+### Get Certificate
+
+```txt
+GET /api/v1/certificates/:certificateId
+```
+
+No body.
+
+### Download Certificate Metadata
+
+```txt
+GET /api/v1/certificates/download/:certificateId
+```
+
+No body.
+
+### Check Certificate Eligibility
+
+```txt
+GET /api/v1/certificates/enrollments/:enrollmentId/eligibility
+```
+
+No body.
+
+### Generate Certificate
+
+```txt
+POST /api/v1/certificates/enrollments/:enrollmentId/generate
+```
+
+No body.
+
+### Edit Certificate
+
+```txt
+PATCH /api/v1/certificates/:certificateId
+```
+
+```json
+{
+  "certificateNo": "KC-2026-0001",
+  "certificateUrl": "https://example.com/certificate.pdf",
+  "issuedAt": "2026-08-01"
+}
+```
+
+### Delete Certificate
+
+```txt
+DELETE /api/v1/certificates/:certificateId
+```
+
+No body.
+
+Certificate generation requires:
+
+- course is published,
+- all lessons completed,
+- all quizzes passed,
+- final assignment submitted and passed,
+- no previous certificate exists for that enrollment.
+
+## Student Learning Flow
+
+1. Student registers/logs in.
+2. Student views published course.
+3. Student enrolls.
+4. Student fetches milestones/modules/lessons after login.
+5. Student completes lessons in order.
+6. Student views assignment after login.
+7. Student submits assignment.
+8. Admin grades assignment.
+9. Student generates certificate after eligibility passes.
+
+## Current Limitations
+
+- No frontend included.
+- No seed command for initial `super_admin`.
+- No certificate PDF generator yet.
+- No certificate template builder yet.
+- No QR code generator yet.
+- No full quiz-attempt lifecycle yet.
+- Refresh tokens are stateless and not stored/revoked in DB.
+
+## QA Commands
+
+```bash
+npm run build
+npm run test:course-auth
 ```
