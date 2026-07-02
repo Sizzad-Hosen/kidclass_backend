@@ -11,10 +11,12 @@ import {
 
 const router = Router();
 
+router.use(authenticate);
+
 router.get('/', MilestoneController.getMilestones);
 router.get('/:milestoneId', validateRequest(milestoneIdParamValidationSchema), MilestoneController.getMilestoneById);
 
-router.use(authenticate, authorize(...COURSE_MANAGEMENT_ROLES));
+router.use(authorize(...COURSE_MANAGEMENT_ROLES));
 
 router.post('/', validateRequest(createMilestoneValidationSchema), MilestoneController.createMilestone);
 router.patch(
