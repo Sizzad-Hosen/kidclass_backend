@@ -10,7 +10,7 @@ The project currently uses three roles:
 - `super_admin`
 - `student`
 
-`course_manager` is intentionally not used in the current permission model.
+Only `super_admin`, `admin`, and `student` are used in the current permission model.
 
 ## Missing APIs Found
 

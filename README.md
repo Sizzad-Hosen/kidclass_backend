@@ -35,8 +35,6 @@ The project solves early-childhood LMS problems:
 - `admin`: manages LMS content, users, assignments, and certificates.
 - `student`: enrolls, learns, submits assignments, tracks progress, and earns certificates.
 
-There is no `course_manager` role.
-
 ## Clone And Install
 
 ```bash
@@ -341,13 +339,15 @@ No body.
 
 ## Milestone APIs
 
-Milestone GET routes require authentication so logged-in students can continue course flow.
+Milestone GET routes require authentication only. Logged-in students can access these routes to continue the course flow. Create/update/delete routes are admin/super_admin only.
 
 ### Get Milestones
 
 ```txt
 GET /api/v1/milestones
 ```
+
+Access: authenticated `student`, `admin`, `super_admin`.
 
 No body.
 
@@ -357,6 +357,8 @@ No body.
 GET /api/v1/milestones/:milestoneId
 ```
 
+Access: authenticated `student`, `admin`, `super_admin`.
+
 No body.
 
 ### Create Milestone
@@ -364,6 +366,8 @@ No body.
 ```txt
 POST /api/v1/milestones
 ```
+
+Access: `admin`, `super_admin`.
 
 ```json
 {
@@ -379,6 +383,8 @@ POST /api/v1/milestones
 PATCH /api/v1/milestones/:milestoneId
 ```
 
+Access: `admin`, `super_admin`.
+
 ```json
 {
   "title": "Updated Milestone",
@@ -392,17 +398,21 @@ PATCH /api/v1/milestones/:milestoneId
 DELETE /api/v1/milestones/:milestoneId
 ```
 
+Access: `admin`, `super_admin`.
+
 No body.
 
 ## Module APIs
 
-Module GET routes require authentication.
+Module GET routes require authentication only. Logged-in students can access these routes to continue the course flow. Create/update/delete routes are admin/super_admin only.
 
 ### Get Modules
 
 ```txt
 GET /api/v1/modules
 ```
+
+Access: authenticated `student`, `admin`, `super_admin`.
 
 No body.
 
@@ -412,6 +422,8 @@ No body.
 GET /api/v1/modules/:moduleId
 ```
 
+Access: authenticated `student`, `admin`, `super_admin`.
+
 No body.
 
 ### Create Module
@@ -419,6 +431,8 @@ No body.
 ```txt
 POST /api/v1/modules
 ```
+
+Access: `admin`, `super_admin`.
 
 ```json
 {
@@ -434,6 +448,8 @@ POST /api/v1/modules
 PATCH /api/v1/modules/:moduleId
 ```
 
+Access: `admin`, `super_admin`.
+
 ```json
 {
   "title": "Updated Module",
@@ -447,17 +463,21 @@ PATCH /api/v1/modules/:moduleId
 DELETE /api/v1/modules/:moduleId
 ```
 
+Access: `admin`, `super_admin`.
+
 No body.
 
 ## Lesson APIs
 
-Lesson GET routes require authentication. Lesson progress enforces unlock order inside each module.
+Lesson GET routes require authentication only. Logged-in students can access lessons to continue learning. Create/update/delete routes are admin/super_admin only. Lesson progress enforces unlock order inside each module.
 
 ### Get Lessons
 
 ```txt
 GET /api/v1/lessons
 ```
+
+Access: authenticated `student`, `admin`, `super_admin`.
 
 No body.
 
@@ -467,6 +487,8 @@ No body.
 GET /api/v1/lessons/:lessonId
 ```
 
+Access: authenticated `student`, `admin`, `super_admin`.
+
 No body.
 
 ### Create Lesson
@@ -474,6 +496,8 @@ No body.
 ```txt
 POST /api/v1/lessons
 ```
+
+Access: `admin`, `super_admin`.
 
 ```json
 {
@@ -493,6 +517,8 @@ POST /api/v1/lessons
 PATCH /api/v1/lessons/:lessonId
 ```
 
+Access: `admin`, `super_admin`.
+
 ```json
 {
   "title": "Learn Letter A",
@@ -505,6 +531,8 @@ PATCH /api/v1/lessons/:lessonId
 ```txt
 DELETE /api/v1/lessons/:lessonId
 ```
+
+Access: `admin`, `super_admin`.
 
 No body.
 
