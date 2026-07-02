@@ -34,8 +34,7 @@ The codebase currently uses three roles:
 
 | Role | Access |
 | --- | --- |
-| `admin` | Publish/archive courses, manage all courses through ownership bypass, manage certificates |
-| `course_manager` | Manage only their own courses, milestones, modules, lessons, quizzes, and assignments |
+| `admin` | Publish/archive courses, manage all courses through ownership bypass, manage certificates , Manage only their own courses, milestones, modules, lessons, quizzes, and assignments |
 | `student` | Register/login, enroll in published courses, submit assignments, update own progress, generate eligible certificates |
 
 `superadmin` is not used in this codebase.
