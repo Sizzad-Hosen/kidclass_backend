@@ -684,6 +684,23 @@ Access: `admin`, `super_admin`.
 }
 ```
 
+Multipart Cloudinary upload example:
+
+```txt
+POST /api/v1/lessons
+Content-Type: multipart/form-data
+
+module=64f000000000000000000003
+order=1
+title=Learn A
+contentType=video
+duration=300
+contentNotes=Watch and repeat the sound A.
+video=<video file>
+```
+
+When `video` file is sent, the backend uploads it to Cloudinary and saves the returned URL in `videoUrl`.
+
 ### Update Lesson
 
 ```txt
@@ -697,6 +714,17 @@ Access: `admin`, `super_admin`.
   "title": "Learn Letter A",
   "duration": 360
 }
+```
+
+Multipart video replacement example:
+
+```txt
+PATCH /api/v1/lessons/:lessonId
+Content-Type: multipart/form-data
+
+title=Learn Letter A
+duration=360
+video=<new video file>
 ```
 
 ### Delete Lesson
