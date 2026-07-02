@@ -106,6 +106,96 @@ Authorization: Bearer <accessToken>
 }
 ```
 
+## API Endpoint List
+
+```txt
+AUTH
+POST   /api/v1/auth/register
+POST   /api/v1/auth/login
+POST   /api/v1/auth/forgot-password
+POST   /api/v1/auth/reset-password
+POST   /api/v1/auth/refresh-token
+POST   /api/v1/auth/logout
+GET    /api/v1/auth/me
+
+USERS
+GET    /api/v1/users
+GET    /api/v1/users/:userId
+POST   /api/v1/users
+PATCH  /api/v1/users/:userId
+DELETE /api/v1/users/:userId
+
+COURSES
+GET    /api/v1/courses
+GET    /api/v1/courses/:courseId
+GET    /api/v1/courses/:courseId/details
+GET    /api/v1/courses/:courseId/structure
+POST   /api/v1/courses
+PATCH  /api/v1/courses/:courseId
+PATCH  /api/v1/courses/:courseId/publish
+PATCH  /api/v1/courses/:courseId/archive
+DELETE /api/v1/courses/:courseId
+
+MILESTONES
+GET    /api/v1/milestones
+GET    /api/v1/milestones/:milestoneId
+POST   /api/v1/milestones
+PATCH  /api/v1/milestones/:milestoneId
+DELETE /api/v1/milestones/:milestoneId
+
+MODULES
+GET    /api/v1/modules
+GET    /api/v1/modules/:moduleId
+POST   /api/v1/modules
+PATCH  /api/v1/modules/:moduleId
+DELETE /api/v1/modules/:moduleId
+
+LESSONS
+GET    /api/v1/lessons
+GET    /api/v1/lessons/:lessonId
+POST   /api/v1/lessons
+PATCH  /api/v1/lessons/:lessonId
+DELETE /api/v1/lessons/:lessonId
+
+QUIZZES
+GET    /api/v1/quizzes
+GET    /api/v1/quizzes/:quizId
+POST   /api/v1/quizzes
+PATCH  /api/v1/quizzes/:quizId
+DELETE /api/v1/quizzes/:quizId
+
+ASSIGNMENTS
+GET    /api/v1/assignments
+GET    /api/v1/assignments/:assignmentId
+POST   /api/v1/assignments
+PATCH  /api/v1/assignments/:assignmentId
+DELETE /api/v1/assignments/:assignmentId
+POST   /api/v1/assignments/:assignmentId/submissions
+GET    /api/v1/assignments/:assignmentId/submissions
+PATCH  /api/v1/assignments/:assignmentId/submissions/:studentId
+
+ENROLLMENTS
+POST   /api/v1/enrollments
+GET    /api/v1/enrollments/me
+GET    /api/v1/enrollments/:enrollmentId
+PATCH  /api/v1/enrollments/:enrollmentId/cancel
+
+PROGRESS
+PATCH  /api/v1/progress/lessons/:lessonId
+GET    /api/v1/progress/courses/:courseId
+GET    /api/v1/progress/enrollments/:enrollmentId
+
+CERTIFICATES
+GET    /api/v1/certificates/verify/:certificateNo
+GET    /api/v1/certificates
+GET    /api/v1/certificates/:certificateId
+GET    /api/v1/certificates/download/:certificateId
+GET    /api/v1/certificates/enrollments/:enrollmentId/eligibility
+POST   /api/v1/certificates/enrollments/:enrollmentId/generate
+PATCH  /api/v1/certificates/:certificateId
+DELETE /api/v1/certificates/:certificateId
+```
+
 ## Auth APIs
 
 ### Register Student
