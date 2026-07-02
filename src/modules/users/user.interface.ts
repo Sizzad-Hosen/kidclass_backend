@@ -1,6 +1,6 @@
 import { Document, Types } from 'mongoose';
 
-export type UserRole = 'student' | 'course_manager' | 'admin' | 'superadmin';
+export type UserRole = 'student' | 'course_manager' | 'admin';
 
 export interface IUser extends Document {
   _id: Types.ObjectId;

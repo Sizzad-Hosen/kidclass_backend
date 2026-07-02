@@ -42,7 +42,6 @@ const runAuthorize = (role?: string) => {
 const cases: TestCase[] = [
   { name: 'course_manager can access', role: 'course_manager' },
   { name: 'admin can access', role: 'admin' },
-  { name: 'superadmin can access', role: 'superadmin' },
   { name: 'student cannot access', role: 'student', expectedStatus: 403 },
   { name: 'unauthenticated user cannot access', expectedStatus: 401 }
 ];

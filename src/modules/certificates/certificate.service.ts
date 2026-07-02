@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import { AppError } from '../../utils/AppError';
 import { Assignment } from '../assignments/assignment.model';
 import { AssignmentSubmission } from '../assignments/assignmentSubmission.model';
+import { COURSE_MANAGEMENT_ROLES } from '../courses/course.constant';
 import { CourseService } from '../courses/course.service';
 import { Enrollment } from '../enrollments/enrollment.model';
 import { Lesson } from '../lessons/lesson.model';
@@ -14,7 +15,6 @@ import { QuizResult } from '../quizzes/quizResult.model';
 import { Certificate } from './certificate.model';
 
 const FINAL_ASSIGNMENT_PASSING_PERCENTAGE = 70;
-const MANAGEMENT_ROLES = ['course_manager', 'admin', 'superadmin'];
 
 const toObjectId = (id: string | Types.ObjectId) => new Types.ObjectId(id.toString());
 
@@ -29,7 +29,7 @@ const ensureEnrollmentAccess = async (enrollmentId: string, userId: string, role
     return enrollment;
   }
 
-  if (!MANAGEMENT_ROLES.includes(role)) {
+  if (!COURSE_MANAGEMENT_ROLES.includes(role as never)) {
     throw new AppError(httpStatus.FORBIDDEN, 'You can only access your own certificate');
   }
 

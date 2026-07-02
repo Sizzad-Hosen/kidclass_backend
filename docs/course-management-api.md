@@ -10,7 +10,6 @@ All course management APIs require a valid Bearer token and one of these roles:
 
 - `course_manager`
 - `admin`
-- `superadmin`
 
 Users without one of these roles, such as `student`, cannot create, read, update, delete, or access the course management resources.
 
