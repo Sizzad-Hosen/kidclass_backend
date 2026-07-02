@@ -1,4 +1,5 @@
 import httpStatus from 'http-status';
+import crypto from 'node:crypto';
 import { IUser } from '../users/user.interface';
 import { User } from '../users/user.model';
 import { AppError } from '../../utils/AppError';
@@ -14,6 +15,17 @@ type LoginPayload = {
   email: string;
   password: string;
 };
+
+type ForgotPasswordPayload = {
+  email: string;
+};
+
+type ResetPasswordPayload = {
+  token: string;
+  password: string;
+};
+
+const PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES = 15;
 
 const sanitizeUser = (user: IUser) => ({
   id: user._id,
@@ -84,8 +96,60 @@ const getMe = async (userId: string) => {
   return sanitizeUser(user);
 };
 
+const hashResetToken = (token: string) => crypto.createHash('sha256').update(token).digest('hex');
+
+const forgotPassword = async (payload: ForgotPasswordPayload) => {
+  const user = await User.findOne({ email: payload.email });
+
+  if (!user || !user.isActive) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  const resetToken = crypto.randomBytes(32).toString('hex');
+
+  user.passwordResetToken = hashResetToken(resetToken);
+  user.passwordResetExpires = new Date(Date.now() + PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES * 60 * 1000);
+  await user.save();
+
+  return {
+    resetToken,
+    expiresInMinutes: PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES
+  };
+};
+
+const resetPassword = async (payload: ResetPasswordPayload) => {
+  const passwordResetToken = hashResetToken(payload.token);
+
+  const user = await User.findOne({
+    passwordResetToken,
+    passwordResetExpires: { $gt: new Date() }
+  }).select('+passwordResetToken +passwordResetExpires');
+
+  if (!user || !user.isActive) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Invalid or expired reset token');
+  }
+
+  user.password = payload.password;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+  await user.save();
+
+  const jwtPayload = {
+    userId: user._id.toString(),
+    role: user.role
+  };
+
+  return {
+    user: sanitizeUser(user),
+    accessToken: signAccessToken(jwtPayload),
+    refreshToken: signRefreshToken(jwtPayload)
+  };
+};
+
 export const AuthService = {
   registerUser,
   loginUser,
-  getMe
+  getMe,
+  forgotPassword,
+  resetPassword
 };

@@ -36,6 +36,28 @@ const getMe = catchAsync(async (req, res) => {
   });
 });
 
+const forgotPassword = catchAsync(async (req, res) => {
+  const result = await AuthService.forgotPassword(req.body);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Password reset token generated successfully',
+    data: result
+  });
+});
+
+const resetPassword = catchAsync(async (req, res) => {
+  const result = await AuthService.resetPassword(req.body);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Password reset successfully',
+    data: result
+  });
+});
+
 const logout = catchAsync(async (_req, res) => {
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -48,5 +70,7 @@ export const AuthController = {
   registerUser,
   loginUser,
   getMe,
+  forgotPassword,
+  resetPassword,
   logout
 };

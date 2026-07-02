@@ -14,3 +14,16 @@ export const loginValidationSchema = z.object({
     password: z.string().min(1, 'Password is required')
   })
 });
+
+export const forgotPasswordValidationSchema = z.object({
+  body: z.object({
+    email: z.string().trim().email('Invalid email format').toLowerCase()
+  })
+});
+
+export const resetPasswordValidationSchema = z.object({
+  body: z.object({
+    token: z.string().min(1, 'Reset token is required'),
+    password: z.string().min(8, 'Password must be at least 8 characters')
+  })
+});
