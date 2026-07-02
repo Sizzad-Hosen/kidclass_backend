@@ -11,11 +11,12 @@ import {
 
 const router = Router();
 
+router.get('/', LessonController.getLessons);
+router.get('/:lessonId', validateRequest(lessonIdParamValidationSchema), LessonController.getLessonById);
+
 router.use(authenticate, authorize(...COURSE_MANAGEMENT_ROLES));
 
 router.post('/', validateRequest(createLessonValidationSchema), LessonController.createLesson);
-router.get('/', LessonController.getLessons);
-router.get('/:lessonId', validateRequest(lessonIdParamValidationSchema), LessonController.getLessonById);
 router.patch('/:lessonId', validateRequest(updateLessonValidationSchema), LessonController.updateLesson);
 router.delete('/:lessonId', validateRequest(lessonIdParamValidationSchema), LessonController.deleteLesson);
 

@@ -22,6 +22,12 @@ router.post(
   validateRequest(submitAssignmentValidationSchema),
   AssignmentController.submitAssignment
 );
+router.get(
+  '/:assignmentId',
+  authenticate,
+  validateRequest(assignmentIdParamValidationSchema),
+  AssignmentController.getAssignmentById
+);
 
 router.use(authenticate, authorize(...COURSE_MANAGEMENT_ROLES));
 
@@ -36,11 +42,6 @@ router.patch(
   '/:assignmentId/submissions/:studentId',
   validateRequest(gradeAssignmentSubmissionValidationSchema),
   AssignmentController.gradeAssignmentSubmission
-);
-router.get(
-  '/:assignmentId',
-  validateRequest(assignmentIdParamValidationSchema),
-  AssignmentController.getAssignmentById
 );
 router.patch(
   '/:assignmentId',

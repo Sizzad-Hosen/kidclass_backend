@@ -7,10 +7,10 @@ Reviewed the current Express/Mongoose backend modules for auth, course managemen
 The project currently uses three roles:
 
 - `admin`
-- `course_manager`
+- `super_admin`
 - `student`
 
-`superadmin` is intentionally not used, based on the latest project direction.
+`course_manager` is intentionally not used in the current permission model.
 
 ## Missing APIs Found
 
@@ -53,9 +53,9 @@ Still missing or only partially represented:
 
 ## Security Issues Found And Fixed
 
-- Added named guard helpers: `adminGuard`, `courseManagerGuard`, `studentGuard`, and `adminOrCourseManagerGuard`.
+- Added named guard helpers: `adminGuard`, `superAdminGuard`, `studentGuard`, and `adminOrSuperAdminGuard`.
 - Course publish/archive is restricted to `admin`.
-- Certificate edit/delete remains restricted to `admin` and owning `course_manager`.
+- Certificate edit/delete remains restricted to `admin` and `super_admin`.
 - Public routes are limited to auth entrypoints, published course reads, health, and certificate verification.
 
 ## QA Test Checklist

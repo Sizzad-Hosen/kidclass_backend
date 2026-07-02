@@ -12,8 +12,8 @@ router.use(authenticate, authorize(...COURSE_MANAGEMENT_ROLES));
 
 Allowed roles:
 
-- `course_manager`
 - `admin`
+- `super_admin`
 
 Blocked users:
 
@@ -40,8 +40,8 @@ npm run test:course-auth
 
 Results:
 
-- `course_manager` can access: passed
 - `admin` can access: passed
+- `super_admin` can access: passed
 - `student` cannot access and receives `403`: passed
 - unauthenticated user cannot access and receives `401`: passed
 - every course-management route file includes the auth + role guard: passed

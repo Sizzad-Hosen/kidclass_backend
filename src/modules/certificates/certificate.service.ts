@@ -35,10 +35,6 @@ const ensureCertificateManagementAccess = async (certificateId: string, userId: 
     throw new AppError(httpStatus.NOT_FOUND, 'Enrollment not found');
   }
 
-  if (role === 'course_manager') {
-    await CourseService.ensureCourseOwnership(enrollment.course.toString(), userId);
-  }
-
   return certificate;
 };
 
@@ -55,10 +51,6 @@ const ensureEnrollmentAccess = async (enrollmentId: string, userId: string, role
 
   if (!COURSE_MANAGEMENT_ROLES.includes(role as never)) {
     throw new AppError(httpStatus.FORBIDDEN, 'You can only access your own certificate');
-  }
-
-  if (role === 'course_manager') {
-    await CourseService.ensureCourseOwnership(enrollment.course.toString(), userId);
   }
 
   return enrollment;
@@ -240,23 +232,6 @@ const getCertificates = async (userId: string, role: string) => {
       .sort({ issuedAt: -1 });
   }
 
-  if (role === 'course_manager') {
-    const certificates = await Certificate.find()
-      .populate({
-        path: 'enrollment',
-        populate: [
-          { path: 'student', select: 'name email role' },
-          { path: 'course', select: 'title category isPublished courseManager' }
-        ]
-      })
-      .sort({ issuedAt: -1 });
-
-    return certificates.filter((certificate) => {
-      const enrollment = certificate.enrollment as unknown as { course?: { courseManager?: Types.ObjectId } };
-      return enrollment.course?.courseManager?.toString() === userId;
-    });
-  }
-
   return Certificate.find()
     .populate({
       path: 'enrollment',
@@ -289,10 +264,6 @@ const getCertificateById = async (certificateId: string, userId: string, role: s
 
   if (role === 'student' && enrollment.student.toString() !== userId) {
     throw new AppError(httpStatus.FORBIDDEN, 'You can only access your own certificate');
-  }
-
-  if (role === 'course_manager' && enrollment.course.courseManager?.toString() !== userId) {
-    throw new AppError(httpStatus.FORBIDDEN, 'You can only access certificates for your own courses');
   }
 
   return certificate;

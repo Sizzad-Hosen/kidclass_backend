@@ -11,11 +11,12 @@ import {
 
 const router = Router();
 
+router.get('/', ModuleController.getModules);
+router.get('/:moduleId', validateRequest(moduleIdParamValidationSchema), ModuleController.getModuleById);
+
 router.use(authenticate, authorize(...COURSE_MANAGEMENT_ROLES));
 
 router.post('/', validateRequest(createModuleValidationSchema), ModuleController.createModule);
-router.get('/', ModuleController.getModules);
-router.get('/:moduleId', validateRequest(moduleIdParamValidationSchema), ModuleController.getModuleById);
 router.patch('/:moduleId', validateRequest(updateModuleValidationSchema), ModuleController.updateModule);
 router.delete('/:moduleId', validateRequest(moduleIdParamValidationSchema), ModuleController.deleteModule);
 
