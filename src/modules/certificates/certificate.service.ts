@@ -18,6 +18,30 @@ const FINAL_ASSIGNMENT_PASSING_PERCENTAGE = 70;
 
 const toObjectId = (id: string | Types.ObjectId) => new Types.ObjectId(id.toString());
 
+const ensureCertificateManagementAccess = async (certificateId: string, userId: string, role: string) => {
+  if (!COURSE_MANAGEMENT_ROLES.includes(role as never)) {
+    throw new AppError(httpStatus.FORBIDDEN, 'You do not have permission to manage certificates');
+  }
+
+  const certificate = await Certificate.findById(certificateId);
+
+  if (!certificate) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Certificate not found');
+  }
+
+  const enrollment = await Enrollment.findById(certificate.enrollment);
+
+  if (!enrollment) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Enrollment not found');
+  }
+
+  if (role === 'course_manager') {
+    await CourseService.ensureCourseOwnership(enrollment.course.toString(), userId);
+  }
+
+  return certificate;
+};
+
 const ensureEnrollmentAccess = async (enrollmentId: string, userId: string, role: string) => {
   const enrollment = await Enrollment.findById(enrollmentId);
 
@@ -191,7 +215,29 @@ const generateCertificate = async (enrollmentId: string, userId: string, role: s
   };
 };
 
+const updateCertificate = async (
+  certificateId: string,
+  payload: { certificateNo?: string; certificateUrl?: string; issuedAt?: Date },
+  userId: string,
+  role: string
+) => {
+  await ensureCertificateManagementAccess(certificateId, userId, role);
+
+  return Certificate.findByIdAndUpdate(certificateId, payload, {
+    new: true,
+    runValidators: true
+  }).populate('enrollment');
+};
+
+const deleteCertificate = async (certificateId: string, userId: string, role: string) => {
+  await ensureCertificateManagementAccess(certificateId, userId, role);
+
+  return Certificate.findByIdAndDelete(certificateId);
+};
+
 export const CertificateService = {
   getCertificateEligibility,
-  generateCertificate
+  generateCertificate,
+  updateCertificate,
+  deleteCertificate
 };
