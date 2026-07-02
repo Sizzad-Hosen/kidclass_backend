@@ -195,12 +195,24 @@ const generateCertificate = async (enrollmentId: string, userId: string, role: s
     throw new AppError(httpStatus.BAD_REQUEST, 'Course is not complete enough to generate certificate');
   }
 
+  const course = await CourseService.getCourseById(enrollment.course.toString());
+
+  if (!course.isPublished) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Course must be published before certificate generation');
+  }
+
+  const existingCertificate = await Certificate.findOne({ enrollment: enrollment._id });
+
+  if (existingCertificate) {
+    throw new AppError(httpStatus.CONFLICT, 'Certificate has already been issued for this enrollment');
+  }
+
   const certificateNo = `KC-${enrollment._id.toString().slice(-8).toUpperCase()}-${Date.now()}`;
-  const certificate = await Certificate.findOneAndUpdate(
-    { enrollment: toObjectId(enrollment._id) },
-    { $setOnInsert: { certificateNo, issuedAt: new Date() } },
-    { new: true, upsert: true, runValidators: true }
-  );
+  const certificate = await Certificate.create({
+    enrollment: toObjectId(enrollment._id),
+    certificateNo,
+    issuedAt: new Date()
+  });
 
   if (enrollment.status !== 'completed') {
     await Enrollment.findByIdAndUpdate(enrollment._id, {
@@ -212,6 +224,99 @@ const generateCertificate = async (enrollmentId: string, userId: string, role: s
   return {
     certificate,
     eligibility
+  };
+};
+
+const getCertificates = async (userId: string, role: string) => {
+  if (role === 'admin') {
+    return Certificate.find()
+      .populate({
+        path: 'enrollment',
+        populate: [
+          { path: 'student', select: 'name email role' },
+          { path: 'course', select: 'title category isPublished courseManager' }
+        ]
+      })
+      .sort({ issuedAt: -1 });
+  }
+
+  if (role === 'course_manager') {
+    const certificates = await Certificate.find()
+      .populate({
+        path: 'enrollment',
+        populate: [
+          { path: 'student', select: 'name email role' },
+          { path: 'course', select: 'title category isPublished courseManager' }
+        ]
+      })
+      .sort({ issuedAt: -1 });
+
+    return certificates.filter((certificate) => {
+      const enrollment = certificate.enrollment as unknown as { course?: { courseManager?: Types.ObjectId } };
+      return enrollment.course?.courseManager?.toString() === userId;
+    });
+  }
+
+  return Certificate.find()
+    .populate({
+      path: 'enrollment',
+      match: { student: toObjectId(userId) },
+      populate: [
+        { path: 'student', select: 'name email role' },
+        { path: 'course', select: 'title category isPublished courseManager' }
+      ]
+    })
+    .sort({ issuedAt: -1 });
+};
+
+const getCertificateById = async (certificateId: string, userId: string, role: string) => {
+  const certificate = await Certificate.findById(certificateId).populate({
+    path: 'enrollment',
+    populate: [
+      { path: 'student', select: 'name email role' },
+      { path: 'course', select: 'title category isPublished courseManager' }
+    ]
+  });
+
+  if (!certificate) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Certificate not found');
+  }
+
+  const enrollment = certificate.enrollment as unknown as {
+    student: Types.ObjectId;
+    course: { courseManager?: Types.ObjectId };
+  };
+
+  if (role === 'student' && enrollment.student.toString() !== userId) {
+    throw new AppError(httpStatus.FORBIDDEN, 'You can only access your own certificate');
+  }
+
+  if (role === 'course_manager' && enrollment.course.courseManager?.toString() !== userId) {
+    throw new AppError(httpStatus.FORBIDDEN, 'You can only access certificates for your own courses');
+  }
+
+  return certificate;
+};
+
+const verifyCertificate = async (certificateNo: string) => {
+  const certificate = await Certificate.findOne({ certificateNo }).populate({
+    path: 'enrollment',
+    populate: [
+      { path: 'student', select: 'name email' },
+      { path: 'course', select: 'title category isPublished' }
+    ]
+  });
+
+  if (!certificate) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Certificate not found');
+  }
+
+  return {
+    certificateNo: certificate.certificateNo,
+    issuedAt: certificate.issuedAt,
+    certificateUrl: certificate.certificateUrl,
+    status: 'valid',
+    enrollment: certificate.enrollment
   };
 };
 
@@ -236,8 +341,11 @@ const deleteCertificate = async (certificateId: string, userId: string, role: st
 };
 
 export const CertificateService = {
+  getCertificates,
+  getCertificateById,
   getCertificateEligibility,
   generateCertificate,
+  verifyCertificate,
   updateCertificate,
   deleteCertificate
 };

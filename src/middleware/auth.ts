@@ -44,3 +44,8 @@ export const authorize =
 
     next();
   };
+
+export const adminGuard = authorize('admin');
+export const courseManagerGuard = authorize('course_manager');
+export const studentGuard = authorize('student');
+export const adminOrCourseManagerGuard = authorize('admin', 'course_manager');

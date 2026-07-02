@@ -5,14 +5,22 @@ import { COURSE_MANAGEMENT_ROLES } from '../courses/course.constant';
 import { CertificateController } from './certificate.controller';
 import {
   certificateIdParamValidationSchema,
+  certificateNumberParamValidationSchema,
   enrollmentIdParamValidationSchema,
   updateCertificateValidationSchema
 } from './certificate.validation';
 
 const router = Router();
 
+router.get(
+  '/verify/:certificateNo',
+  validateRequest(certificateNumberParamValidationSchema),
+  CertificateController.verifyCertificate
+);
+
 router.use(authenticate);
 
+router.get('/', CertificateController.getCertificates);
 router.get(
   '/enrollments/:enrollmentId/eligibility',
   validateRequest(enrollmentIdParamValidationSchema),
@@ -22,6 +30,16 @@ router.post(
   '/enrollments/:enrollmentId/generate',
   validateRequest(enrollmentIdParamValidationSchema),
   CertificateController.generateCertificate
+);
+router.get(
+  '/download/:certificateId',
+  validateRequest(certificateIdParamValidationSchema),
+  CertificateController.downloadCertificate
+);
+router.get(
+  '/:certificateId',
+  validateRequest(certificateIdParamValidationSchema),
+  CertificateController.getCertificateById
 );
 router.patch(
   '/:certificateId',

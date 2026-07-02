@@ -66,11 +66,23 @@ const logout = catchAsync(async (_req, res) => {
   });
 });
 
+const refreshToken = catchAsync(async (req, res) => {
+  const result = await AuthService.refreshToken(req.body.refreshToken);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Token refreshed successfully',
+    data: result
+  });
+});
+
 export const AuthController = {
   registerUser,
   loginUser,
   getMe,
   forgotPassword,
   resetPassword,
-  logout
+  logout,
+  refreshToken
 };

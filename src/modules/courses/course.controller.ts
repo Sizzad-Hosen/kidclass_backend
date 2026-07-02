@@ -15,7 +15,7 @@ const createCourse = catchAsync(async (req, res) => {
 });
 
 const getCourses = catchAsync(async (_req, res) => {
-  const result = await CourseService.getCourses();
+  const result = await CourseService.getPublishedCourses();
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -26,7 +26,7 @@ const getCourses = catchAsync(async (_req, res) => {
 });
 
 const getCourseById = catchAsync(async (req, res) => {
-  const result = await CourseService.getCourseById(req.params.courseId as string);
+  const result = await CourseService.getPublishedCourseById(req.params.courseId as string);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -37,7 +37,7 @@ const getCourseById = catchAsync(async (req, res) => {
 });
 
 const getCourseStructure = catchAsync(async (req, res) => {
-  const result = await CourseService.getCourseStructure(req.params.courseId as string);
+  const result = await CourseService.getCourseStructure(req.params.courseId as string, true);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -48,7 +48,7 @@ const getCourseStructure = catchAsync(async (req, res) => {
 });
 
 const getCourseDetails = catchAsync(async (req, res) => {
-  const result = await CourseService.getCourseStructure(req.params.courseId as string);
+  const result = await CourseService.getCourseStructure(req.params.courseId as string, true);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -65,6 +65,28 @@ const updateCourse = catchAsync(async (req, res) => {
     statusCode: httpStatus.OK,
     success: true,
     message: 'Course updated successfully',
+    data: result
+  });
+});
+
+const publishCourse = catchAsync(async (req, res) => {
+  const result = await CourseService.publishCourse(req.params.courseId as string);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Course published successfully',
+    data: result
+  });
+});
+
+const archiveCourse = catchAsync(async (req, res) => {
+  const result = await CourseService.archiveCourse(req.params.courseId as string);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Course archived successfully',
     data: result
   });
 });
@@ -87,5 +109,7 @@ export const CourseController = {
   getCourseDetails,
   getCourseStructure,
   updateCourse,
+  publishCourse,
+  archiveCourse,
   deleteCourse
 };

@@ -28,3 +28,9 @@ export const updateCertificateValidationSchema = z.object({
       message: 'At least one field is required'
     })
 });
+
+export const certificateNumberParamValidationSchema = z.object({
+  params: z.object({
+    certificateNo: z.string().trim().min(1, 'Certificate number is required')
+  })
+});
