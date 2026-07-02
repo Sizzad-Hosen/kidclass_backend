@@ -14,6 +14,7 @@ const router = Router();
 router.use(authenticate, authorize(...COURSE_MANAGEMENT_ROLES));
 
 router.get('/', CourseController.getCourses);
+router.get('/:courseId/details', validateRequest(courseIdParamValidationSchema), CourseController.getCourseDetails);
 router.get('/:courseId', validateRequest(courseIdParamValidationSchema), CourseController.getCourseById);
 router.get(
   '/:courseId/structure',

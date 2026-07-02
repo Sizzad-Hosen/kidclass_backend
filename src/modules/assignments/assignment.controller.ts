@@ -58,10 +58,59 @@ const deleteAssignment = catchAsync(async (req, res) => {
   });
 });
 
+const submitAssignment = catchAsync(async (req, res) => {
+  const result = await AssignmentService.submitAssignment(
+    req.params.assignmentId as string,
+    req.user!.userId,
+    req.body,
+    req.file
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.CREATED,
+    success: true,
+    message: 'Assignment submitted successfully',
+    data: result
+  });
+});
+
+const gradeAssignmentSubmission = catchAsync(async (req, res) => {
+  const result = await AssignmentService.gradeAssignmentSubmission(
+    req.params.assignmentId as string,
+    req.params.studentId as string,
+    req.body,
+    req.user!.userId
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Assignment submission graded successfully',
+    data: result
+  });
+});
+
+const getAssignmentSubmissions = catchAsync(async (req, res) => {
+  const result = await AssignmentService.getAssignmentSubmissions(
+    req.params.assignmentId as string,
+    req.user!.userId
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Assignment submissions fetched successfully',
+    data: result
+  });
+});
+
 export const AssignmentController = {
   createAssignment,
   getAssignments,
   getAssignmentById,
   updateAssignment,
-  deleteAssignment
+  deleteAssignment,
+  submitAssignment,
+  gradeAssignmentSubmission,
+  getAssignmentSubmissions
 };
