@@ -24,7 +24,7 @@ const userSchema = new Schema<IUser>(
     },
     role: {
       type: String,
-      enum: ['student', 'admin', 'superadmin'],
+      enum: ['student', 'course_manager', 'admin', 'superadmin'],
       default: 'student',
       required: true
     },
@@ -59,7 +59,5 @@ userSchema.pre('save', async function hashPassword(next) {
 userSchema.methods.comparePassword = function comparePassword(candidatePassword: string) {
   return bcrypt.compare(candidatePassword, this.password);
 };
-
-userSchema.index({ email: 1 }, { unique: true });
 
 export const User = model<IUser>('User', userSchema);

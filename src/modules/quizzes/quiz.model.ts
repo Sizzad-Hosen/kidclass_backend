@@ -1,4 +1,5 @@
-import { model, Schema, Types } from 'mongoose';
+import { model, Schema } from 'mongoose';
+import { IQuiz } from './quiz.interface';
 
 const optionSchema = new Schema(
   {
@@ -20,18 +21,9 @@ const questionSchema = new Schema(
   { _id: true }
 );
 
-export interface IQuiz {
-  lesson?: Types.ObjectId;
-  module?: Types.ObjectId;
-  title: string;
-  questions: unknown[];
-  passingScore: number;
-}
-
 const quizSchema = new Schema<IQuiz>(
   {
-    lesson: { type: Schema.Types.ObjectId, ref: 'Lesson' },
-    module: { type: Schema.Types.ObjectId, ref: 'CourseModule' },
+    module: { type: Schema.Types.ObjectId, ref: 'CourseModule', required: true },
     title: { type: String, required: true, trim: true },
     questions: {
       type: [questionSchema],
