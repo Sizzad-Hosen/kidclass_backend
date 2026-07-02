@@ -4,13 +4,15 @@ This backend contains the course-manager academic LMS flow:
 
 Course -> Milestone -> Module -> Lesson + Quiz, with Assignment only on the final Milestone.
 
-## Role
+## Role And Access
 
-Course management write APIs require one of:
+All course management APIs require a valid Bearer token and one of these roles:
 
 - `course_manager`
 - `admin`
 - `superadmin`
+
+Users without one of these roles, such as `student`, cannot create, read, update, delete, or access the course management resources.
 
 ## Entity Structure
 

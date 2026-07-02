@@ -11,6 +11,8 @@ import {
 
 const router = Router();
 
+router.use(authenticate, authorize(...COURSE_MANAGEMENT_ROLES));
+
 router.get('/', CourseController.getCourses);
 router.get('/:courseId', validateRequest(courseIdParamValidationSchema), CourseController.getCourseById);
 router.get(
@@ -18,8 +20,6 @@ router.get(
   validateRequest(courseIdParamValidationSchema),
   CourseController.getCourseStructure
 );
-
-router.use(authenticate, authorize(...COURSE_MANAGEMENT_ROLES));
 
 router.post('/', validateRequest(createCourseValidationSchema), CourseController.createCourse);
 router.patch('/:courseId', validateRequest(updateCourseValidationSchema), CourseController.updateCourse);

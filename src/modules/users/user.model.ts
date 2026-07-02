@@ -60,6 +60,4 @@ userSchema.methods.comparePassword = function comparePassword(candidatePassword:
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-userSchema.index({ email: 1 }, { unique: true });
-
 export const User = model<IUser>('User', userSchema);

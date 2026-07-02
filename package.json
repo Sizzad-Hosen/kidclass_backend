@@ -7,7 +7,8 @@
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "test:course-auth": "ts-node src/tests/course-management-auth.test.ts"
   },
   "keywords": [
     "lms",
