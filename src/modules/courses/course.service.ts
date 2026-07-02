@@ -5,6 +5,7 @@ import { Lesson } from '../lessons/lesson.model';
 import { Milestone } from '../milestones/milestone.model';
 import { CourseModule } from '../modules/module.model';
 import { Quiz } from '../quizzes/quiz.model';
+import { User } from '../users/user.model';
 import { AppError } from '../../utils/AppError';
 import { CourseCreatePayload, CourseUpdatePayload } from './course.interface';
 import { Course } from './course.model';
@@ -19,6 +20,12 @@ const ensureCourseOwnership = async (courseId: string, userId: string) => {
   }
 
   if (course.courseManager.toString() !== userId) {
+    const user = await User.findById(userId).select('role');
+
+    if (user?.role === 'admin') {
+      return course;
+    }
+
     throw new AppError(httpStatus.FORBIDDEN, 'You can only manage your own courses');
   }
 
@@ -36,6 +43,10 @@ const getCourses = async () => {
   return Course.find().populate('courseManager', 'name email role').sort({ createdAt: -1 });
 };
 
+const getPublishedCourses = async () => {
+  return Course.find({ isPublished: true }).populate('courseManager', 'name email role').sort({ createdAt: -1 });
+};
+
 const getCourseById = async (courseId: string) => {
   const course = await Course.findById(courseId).populate('courseManager', 'name email role');
 
@@ -46,8 +57,21 @@ const getCourseById = async (courseId: string) => {
   return course;
 };
 
-const getCourseStructure = async (courseId: string) => {
-  const course = await getCourseById(courseId);
+const getPublishedCourseById = async (courseId: string) => {
+  const course = await Course.findOne({ _id: courseId, isPublished: true }).populate(
+    'courseManager',
+    'name email role'
+  );
+
+  if (!course) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Course not found');
+  }
+
+  return course;
+};
+
+const getCourseStructure = async (courseId: string, publishedOnly = false) => {
+  const course = publishedOnly ? await getPublishedCourseById(courseId) : await getCourseById(courseId);
   const milestones = await Milestone.find({ course: courseId }).sort({ order: 1 });
   const milestoneIds = milestones.map((milestone) => milestone._id);
   const modules = await CourseModule.find({ milestone: { $in: milestoneIds } }).sort({ order: 1 });
@@ -85,6 +109,26 @@ const updateCourse = async (courseId: string, payload: CourseUpdatePayload, user
   return course;
 };
 
+const publishCourse = async (courseId: string) => {
+  const course = await Course.findById(courseId);
+
+  if (!course) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Course not found');
+  }
+
+  return Course.findByIdAndUpdate(courseId, { isPublished: true }, { new: true, runValidators: true });
+};
+
+const archiveCourse = async (courseId: string) => {
+  const course = await Course.findById(courseId);
+
+  if (!course) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Course not found');
+  }
+
+  return Course.findByIdAndUpdate(courseId, { isPublished: false }, { new: true, runValidators: true });
+};
+
 const deleteCourse = async (courseId: string, userId: string) => {
   await ensureCourseOwnership(courseId, userId);
 
@@ -107,9 +151,13 @@ const deleteCourse = async (courseId: string, userId: string) => {
 export const CourseService = {
   createCourse,
   getCourses,
+  getPublishedCourses,
   getCourseById,
+  getPublishedCourseById,
   getCourseStructure,
   updateCourse,
+  publishCourse,
+  archiveCourse,
   deleteCourse,
   ensureCourseOwnership
 };

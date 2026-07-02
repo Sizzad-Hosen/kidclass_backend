@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller';
 import {
   forgotPasswordValidationSchema,
   loginValidationSchema,
+  refreshTokenValidationSchema,
   registerValidationSchema,
   resetPasswordValidationSchema
 } from './auth.validation';
@@ -15,6 +16,7 @@ router.post('/register', validateRequest(registerValidationSchema), AuthControll
 router.post('/login', validateRequest(loginValidationSchema), AuthController.loginUser);
 router.post('/forgot-password', validateRequest(forgotPasswordValidationSchema), AuthController.forgotPassword);
 router.post('/reset-password', validateRequest(resetPasswordValidationSchema), AuthController.resetPassword);
+router.post('/refresh-token', validateRequest(refreshTokenValidationSchema), AuthController.refreshToken);
 router.post('/logout', authenticate, AuthController.logout);
 router.get('/me', authenticate, AuthController.getMe);
 

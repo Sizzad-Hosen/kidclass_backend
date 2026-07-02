@@ -3,6 +3,7 @@ import { Types } from 'mongoose';
 import { AppError } from '../../utils/AppError';
 import { Assignment } from '../assignments/assignment.model';
 import { AssignmentSubmission } from '../assignments/assignmentSubmission.model';
+import { COURSE_MANAGEMENT_ROLES } from '../courses/course.constant';
 import { CourseService } from '../courses/course.service';
 import { Enrollment } from '../enrollments/enrollment.model';
 import { Lesson } from '../lessons/lesson.model';
@@ -14,9 +15,32 @@ import { QuizResult } from '../quizzes/quizResult.model';
 import { Certificate } from './certificate.model';
 
 const FINAL_ASSIGNMENT_PASSING_PERCENTAGE = 70;
-const MANAGEMENT_ROLES = ['course_manager', 'admin', 'superadmin'];
 
 const toObjectId = (id: string | Types.ObjectId) => new Types.ObjectId(id.toString());
+
+const ensureCertificateManagementAccess = async (certificateId: string, userId: string, role: string) => {
+  if (!COURSE_MANAGEMENT_ROLES.includes(role as never)) {
+    throw new AppError(httpStatus.FORBIDDEN, 'You do not have permission to manage certificates');
+  }
+
+  const certificate = await Certificate.findById(certificateId);
+
+  if (!certificate) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Certificate not found');
+  }
+
+  const enrollment = await Enrollment.findById(certificate.enrollment);
+
+  if (!enrollment) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Enrollment not found');
+  }
+
+  if (role === 'course_manager') {
+    await CourseService.ensureCourseOwnership(enrollment.course.toString(), userId);
+  }
+
+  return certificate;
+};
 
 const ensureEnrollmentAccess = async (enrollmentId: string, userId: string, role: string) => {
   const enrollment = await Enrollment.findById(enrollmentId);
@@ -29,7 +53,7 @@ const ensureEnrollmentAccess = async (enrollmentId: string, userId: string, role
     return enrollment;
   }
 
-  if (!MANAGEMENT_ROLES.includes(role)) {
+  if (!COURSE_MANAGEMENT_ROLES.includes(role as never)) {
     throw new AppError(httpStatus.FORBIDDEN, 'You can only access your own certificate');
   }
 
@@ -171,12 +195,24 @@ const generateCertificate = async (enrollmentId: string, userId: string, role: s
     throw new AppError(httpStatus.BAD_REQUEST, 'Course is not complete enough to generate certificate');
   }
 
+  const course = await CourseService.getCourseById(enrollment.course.toString());
+
+  if (!course.isPublished) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Course must be published before certificate generation');
+  }
+
+  const existingCertificate = await Certificate.findOne({ enrollment: enrollment._id });
+
+  if (existingCertificate) {
+    throw new AppError(httpStatus.CONFLICT, 'Certificate has already been issued for this enrollment');
+  }
+
   const certificateNo = `KC-${enrollment._id.toString().slice(-8).toUpperCase()}-${Date.now()}`;
-  const certificate = await Certificate.findOneAndUpdate(
-    { enrollment: toObjectId(enrollment._id) },
-    { $setOnInsert: { certificateNo, issuedAt: new Date() } },
-    { new: true, upsert: true, runValidators: true }
-  );
+  const certificate = await Certificate.create({
+    enrollment: toObjectId(enrollment._id),
+    certificateNo,
+    issuedAt: new Date()
+  });
 
   if (enrollment.status !== 'completed') {
     await Enrollment.findByIdAndUpdate(enrollment._id, {
@@ -191,7 +227,125 @@ const generateCertificate = async (enrollmentId: string, userId: string, role: s
   };
 };
 
+const getCertificates = async (userId: string, role: string) => {
+  if (role === 'admin') {
+    return Certificate.find()
+      .populate({
+        path: 'enrollment',
+        populate: [
+          { path: 'student', select: 'name email role' },
+          { path: 'course', select: 'title category isPublished courseManager' }
+        ]
+      })
+      .sort({ issuedAt: -1 });
+  }
+
+  if (role === 'course_manager') {
+    const certificates = await Certificate.find()
+      .populate({
+        path: 'enrollment',
+        populate: [
+          { path: 'student', select: 'name email role' },
+          { path: 'course', select: 'title category isPublished courseManager' }
+        ]
+      })
+      .sort({ issuedAt: -1 });
+
+    return certificates.filter((certificate) => {
+      const enrollment = certificate.enrollment as unknown as { course?: { courseManager?: Types.ObjectId } };
+      return enrollment.course?.courseManager?.toString() === userId;
+    });
+  }
+
+  return Certificate.find()
+    .populate({
+      path: 'enrollment',
+      match: { student: toObjectId(userId) },
+      populate: [
+        { path: 'student', select: 'name email role' },
+        { path: 'course', select: 'title category isPublished courseManager' }
+      ]
+    })
+    .sort({ issuedAt: -1 });
+};
+
+const getCertificateById = async (certificateId: string, userId: string, role: string) => {
+  const certificate = await Certificate.findById(certificateId).populate({
+    path: 'enrollment',
+    populate: [
+      { path: 'student', select: 'name email role' },
+      { path: 'course', select: 'title category isPublished courseManager' }
+    ]
+  });
+
+  if (!certificate) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Certificate not found');
+  }
+
+  const enrollment = certificate.enrollment as unknown as {
+    student: Types.ObjectId;
+    course: { courseManager?: Types.ObjectId };
+  };
+
+  if (role === 'student' && enrollment.student.toString() !== userId) {
+    throw new AppError(httpStatus.FORBIDDEN, 'You can only access your own certificate');
+  }
+
+  if (role === 'course_manager' && enrollment.course.courseManager?.toString() !== userId) {
+    throw new AppError(httpStatus.FORBIDDEN, 'You can only access certificates for your own courses');
+  }
+
+  return certificate;
+};
+
+const verifyCertificate = async (certificateNo: string) => {
+  const certificate = await Certificate.findOne({ certificateNo }).populate({
+    path: 'enrollment',
+    populate: [
+      { path: 'student', select: 'name email' },
+      { path: 'course', select: 'title category isPublished' }
+    ]
+  });
+
+  if (!certificate) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Certificate not found');
+  }
+
+  return {
+    certificateNo: certificate.certificateNo,
+    issuedAt: certificate.issuedAt,
+    certificateUrl: certificate.certificateUrl,
+    status: 'valid',
+    enrollment: certificate.enrollment
+  };
+};
+
+const updateCertificate = async (
+  certificateId: string,
+  payload: { certificateNo?: string; certificateUrl?: string; issuedAt?: Date },
+  userId: string,
+  role: string
+) => {
+  await ensureCertificateManagementAccess(certificateId, userId, role);
+
+  return Certificate.findByIdAndUpdate(certificateId, payload, {
+    new: true,
+    runValidators: true
+  }).populate('enrollment');
+};
+
+const deleteCertificate = async (certificateId: string, userId: string, role: string) => {
+  await ensureCertificateManagementAccess(certificateId, userId, role);
+
+  return Certificate.findByIdAndDelete(certificateId);
+};
+
 export const CertificateService = {
+  getCertificates,
+  getCertificateById,
   getCertificateEligibility,
-  generateCertificate
+  generateCertificate,
+  verifyCertificate,
+  updateCertificate,
+  deleteCertificate
 };

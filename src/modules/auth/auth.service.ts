@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import { IUser } from '../users/user.interface';
 import { User } from '../users/user.model';
 import { AppError } from '../../utils/AppError';
-import { signAccessToken, signRefreshToken } from '../../utils/jwt';
+import { signAccessToken, signRefreshToken, verifyRefreshToken } from '../../utils/jwt';
 
 type RegisterPayload = {
   name: string;
@@ -146,10 +146,30 @@ const resetPassword = async (payload: ResetPasswordPayload) => {
   };
 };
 
+const refreshToken = async (token: string) => {
+  const decoded = verifyRefreshToken(token);
+  const user = await User.findById(decoded.userId);
+
+  if (!user || !user.isActive) {
+    throw new AppError(httpStatus.UNAUTHORIZED, 'User is not authorized');
+  }
+
+  const jwtPayload = {
+    userId: user._id.toString(),
+    role: user.role
+  };
+
+  return {
+    accessToken: signAccessToken(jwtPayload),
+    refreshToken: signRefreshToken(jwtPayload)
+  };
+};
+
 export const AuthService = {
   registerUser,
   loginUser,
   getMe,
   forgotPassword,
-  resetPassword
+  resetPassword,
+  refreshToken
 };

@@ -14,7 +14,6 @@ Allowed roles:
 
 - `course_manager`
 - `admin`
-- `superadmin`
 
 Blocked users:
 
@@ -43,7 +42,6 @@ Results:
 
 - `course_manager` can access: passed
 - `admin` can access: passed
-- `superadmin` can access: passed
 - `student` cannot access and receives `403`: passed
 - unauthenticated user cannot access and receives `401`: passed
 - every course-management route file includes the auth + role guard: passed
