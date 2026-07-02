@@ -3,6 +3,7 @@ import { AssignmentRoutes } from './modules/assignments/assignment.route';
 import { AuthRoutes } from './modules/auth/auth.route';
 import { CertificateRoutes } from './modules/certificates/certificate.route';
 import { CourseRoutes } from './modules/courses/course.route';
+import { DashboardRoutes } from './modules/dashboard/dashboard.route';
 import { EnrollmentRoutes } from './modules/enrollments/enrollment.route';
 import { LessonRoutes } from './modules/lessons/lesson.route';
 import { MilestoneRoutes } from './modules/milestones/milestone.route';
@@ -15,6 +16,7 @@ const router = Router();
 
 router.use('/auth', AuthRoutes);
 router.use('/courses', CourseRoutes);
+router.use('/dashboard', DashboardRoutes);
 router.use('/milestones', MilestoneRoutes);
 router.use('/modules', ModuleRoutes);
 router.use('/lessons', LessonRoutes);

@@ -125,6 +125,15 @@ POST   /api/v1/users
 PATCH  /api/v1/users/:userId
 DELETE /api/v1/users/:userId
 
+DASHBOARD
+GET    /api/v1/dashboard/overview
+GET    /api/v1/dashboard/metadata
+GET    /api/v1/dashboard/recent-activity
+GET    /api/v1/dashboard/revenue
+GET    /api/v1/dashboard/courses
+GET    /api/v1/dashboard/students
+GET    /api/v1/dashboard/enrollments
+
 COURSES
 GET    /api/v1/courses
 GET    /api/v1/courses/:courseId
@@ -335,6 +344,80 @@ DELETE /api/v1/users/:userId
 ```
 
 No body.
+
+## Dashboard APIs
+
+Dashboard APIs are admin/super_admin only. They are designed for admin panels, cards, charts, metadata, revenue, and detail pages.
+
+### Dashboard Overview
+
+```txt
+GET /api/v1/dashboard/overview
+```
+
+No body.
+
+Returns counts for users, students, admins, courses, enrollments, lessons, quizzes, assignments, certificates, pending assignment reviews, and paid revenue.
+
+### Dashboard Metadata
+
+```txt
+GET /api/v1/dashboard/metadata
+```
+
+No body.
+
+Returns grouped metadata for courses by category, users by role, enrollments by status, and payments by status.
+
+### Recent Activity
+
+```txt
+GET /api/v1/dashboard/recent-activity
+```
+
+No body.
+
+Returns recent users, courses, enrollments, certificates, and assignment submissions.
+
+### Revenue Dashboard
+
+```txt
+GET /api/v1/dashboard/revenue
+```
+
+No body.
+
+Returns payment totals by status and recent payment records.
+
+### Course Dashboard Details
+
+```txt
+GET /api/v1/dashboard/courses
+```
+
+No body.
+
+Returns courses with enrollment and milestone counts for admin course detail/list pages.
+
+### Student Dashboard Details
+
+```txt
+GET /api/v1/dashboard/students
+```
+
+No body.
+
+Returns students with enrollment, completed lesson, and certificate counts.
+
+### Enrollment Dashboard Details
+
+```txt
+GET /api/v1/dashboard/enrollments
+```
+
+No body.
+
+Returns enrollments with populated student and course data.
 
 ## Course Management APIs
 
@@ -601,6 +684,23 @@ Access: `admin`, `super_admin`.
 }
 ```
 
+Multipart Cloudinary upload example:
+
+```txt
+POST /api/v1/lessons
+Content-Type: multipart/form-data
+
+module=64f000000000000000000003
+order=1
+title=Learn A
+contentType=video
+duration=300
+contentNotes=Watch and repeat the sound A.
+video=<video file>
+```
+
+When `video` file is sent, the backend uploads it to Cloudinary and saves the returned URL in `videoUrl`.
+
 ### Update Lesson
 
 ```txt
@@ -614,6 +714,17 @@ Access: `admin`, `super_admin`.
   "title": "Learn Letter A",
   "duration": 360
 }
+```
+
+Multipart video replacement example:
+
+```txt
+PATCH /api/v1/lessons/:lessonId
+Content-Type: multipart/form-data
+
+title=Learn Letter A
+duration=360
+video=<new video file>
 ```
 
 ### Delete Lesson
