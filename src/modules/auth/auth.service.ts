@@ -25,6 +25,11 @@ type ResetPasswordPayload = {
   password: string;
 };
 
+type ChangePasswordPayload = {
+  currentPassword: string;
+  newPassword: string;
+};
+
 const PASSWORD_RESET_TOKEN_EXPIRES_IN_MINUTES = 15;
 
 const sanitizeUser = (user: IUser) => ({
@@ -146,6 +151,25 @@ const resetPassword = async (payload: ResetPasswordPayload) => {
   };
 };
 
+const changePassword = async (userId: string, payload: ChangePasswordPayload) => {
+  const user = await User.findById(userId).select('+password');
+
+  if (!user || !user.isActive) {
+    throw new AppError(httpStatus.NOT_FOUND, 'User not found');
+  }
+
+  const isPasswordMatched = await user.comparePassword(payload.currentPassword);
+
+  if (!isPasswordMatched) {
+    throw new AppError(httpStatus.UNAUTHORIZED, 'Current password is incorrect');
+  }
+
+  user.password = payload.newPassword;
+  await user.save();
+
+  return { changed: true };
+};
+
 const refreshToken = async (token: string) => {
   const decoded = verifyRefreshToken(token);
   const user = await User.findById(decoded.userId);
@@ -171,5 +195,6 @@ export const AuthService = {
   getMe,
   forgotPassword,
   resetPassword,
+  changePassword,
   refreshToken
 };
