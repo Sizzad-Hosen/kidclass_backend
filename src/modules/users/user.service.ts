@@ -3,6 +3,14 @@ import { AppError } from '../../utils/AppError';
 import { IUser, UserRole } from './user.interface';
 import { User } from './user.model';
 
+type UserListQuery = {
+  search?: string;
+  role?: string;
+  status?: string;
+  page?: string;
+  limit?: string;
+};
+
 type CreateUserPayload = {
   name: string;
   email: string;
@@ -25,9 +33,41 @@ const sanitizeUser = (user: IUser) => {
   };
 };
 
-const getUsers = async () => {
-  const users = await User.find().sort({ createdAt: -1 });
-  return users.map((user) => sanitizeUser(user));
+const getUsers = async (query: UserListQuery = {}) => {
+  const page = Math.max(1, Number(query.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(query.limit) || 10));
+  const filter: Record<string, unknown> = {};
+
+  if (query.search?.trim()) {
+    const escapedSearch = query.search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    filter.$or = [
+      { name: { $regex: escapedSearch, $options: 'i' } },
+      { email: { $regex: escapedSearch, $options: 'i' } }
+    ];
+  }
+
+  if (['student', 'admin', 'super_admin'].includes(query.role ?? '')) {
+    filter.role = query.role;
+  }
+
+  if (query.status === 'active') filter.isActive = true;
+  if (query.status === 'inactive') filter.isActive = false;
+
+  const [users, total] = await Promise.all([
+    User.find(filter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit),
+    User.countDocuments(filter)
+  ]);
+
+  return {
+    users: users.map((user) => sanitizeUser(user)),
+    total,
+    page,
+    limit,
+    totalPages: Math.max(1, Math.ceil(total / limit))
+  };
 };
 
 const getUserById = async (userId: string) => {
