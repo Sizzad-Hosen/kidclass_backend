@@ -15,7 +15,8 @@ const envSchema = z.object({
   CORS_ORIGIN: z.string().default('*'),
   CLOUDINARY_CLOUD_NAME: z.string().optional(),
   CLOUDINARY_API_KEY: z.string().optional(),
-  CLOUDINARY_API_SECRET: z.string().optional()
+  CLOUDINARY_API_SECRET: z.string().optional(),
+  PUBLIC_BASE_URL: z.string().url().optional()
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

@@ -4,7 +4,7 @@ import { sendResponse } from '../../utils/sendResponse';
 import { CourseService } from './course.service';
 
 const createCourse = catchAsync(async (req, res) => {
-  const result = await CourseService.createCourse(req.body, req.user!.userId);
+  const result = await CourseService.createCourse(req.body, req.user!.userId, req.file);
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
@@ -65,7 +65,12 @@ const getCourseDetails = catchAsync(async (req, res) => {
 });
 
 const updateCourse = catchAsync(async (req, res) => {
-  const result = await CourseService.updateCourse(req.params.courseId as string, req.body, req.user!.userId);
+  const result = await CourseService.updateCourse(
+    req.params.courseId as string,
+    req.body,
+    req.user!.userId,
+    req.file
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
