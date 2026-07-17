@@ -202,8 +202,26 @@ const getCourseProgressByEnrollment = async (enrollmentId: string, userId: strin
   return buildCourseProgress(enrollmentId, userId, role);
 };
 
+const getStudentSummary = async (studentId: string) => {
+  const enrollments = await Enrollment.find({
+    student: studentId,
+    status: { $in: ['active', 'completed'] }
+  }).select('_id');
+  const enrollmentIds = enrollments.map((enrollment) => enrollment._id);
+  const completedLessons = await Progress.countDocuments({
+    enrollment: { $in: enrollmentIds },
+    status: 'completed'
+  });
+
+  return {
+    enrolledCourses: enrollments.length,
+    completedLessons
+  };
+};
+
 export const ProgressService = {
   updateLessonProgress,
   getCourseProgressByCourse,
-  getCourseProgressByEnrollment
+  getCourseProgressByEnrollment,
+  getStudentSummary
 };

@@ -8,7 +8,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "lint": "tsc --noEmit",
-    "test:course-auth": "ts-node src/tests/course-management-auth.test.ts"
+    "test:course-auth": "ts-node src/tests/course-management-auth.test.ts",
+    "test:course-crud": "ts-node --transpile-only src/tests/course-management-crud.test.ts"
   },
   "keywords": [
     "lms",

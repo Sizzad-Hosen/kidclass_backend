@@ -4,6 +4,7 @@ import { UploadApiResponse } from 'cloudinary';
 import { cloudinary } from '../../config/cloudinary';
 import { AppError } from '../../utils/AppError';
 import { CourseService } from '../courses/course.service';
+import { Enrollment } from '../enrollments/enrollment.model';
 import { MilestoneService } from '../milestones/milestone.service';
 import { ModuleService } from '../modules/module.service';
 import { AssignmentCreatePayload, AssignmentUpdatePayload } from './assignment.interface';
@@ -64,6 +65,31 @@ const getAssignments = async () => {
     .populate('milestone', 'title order course')
     .populate('module', 'title order milestone')
     .sort({ createdAt: -1 });
+};
+
+const getMyAssignments = async (studentId: string) => {
+  const enrollments = await Enrollment.find({
+    student: studentId,
+    status: { $in: ['active', 'completed'] }
+  }).select('course');
+  const courseIds = enrollments.map((enrollment) => enrollment.course);
+  const milestones = await MilestoneService.getMilestonesByCourseIds(courseIds);
+  const milestoneIds = milestones.map((milestone) => milestone._id);
+  const assignments = await Assignment.find({ milestone: { $in: milestoneIds } })
+    .populate('milestone', 'title order course')
+    .sort({ dueDate: 1, createdAt: -1 });
+  const submissions = await AssignmentSubmission.find({
+    student: studentId,
+    assignment: { $in: assignments.map((assignment) => assignment._id) }
+  });
+  const submissionMap = new Map(
+    submissions.map((submission) => [submission.assignment.toString(), submission.toObject()])
+  );
+
+  return assignments.map((assignment) => ({
+    ...assignment.toObject(),
+    submission: submissionMap.get(assignment._id.toString()) ?? null
+  }));
 };
 
 const getAssignmentById = async (assignmentId: string) => {
@@ -238,6 +264,7 @@ const getAssignmentSubmissions = async (assignmentId: string, userId: string) =>
 export const AssignmentService = {
   createAssignment,
   getAssignments,
+  getMyAssignments,
   getAssignmentById,
   updateAssignment,
   deleteAssignment,

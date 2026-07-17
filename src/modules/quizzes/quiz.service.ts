@@ -1,6 +1,5 @@
 import httpStatus from 'http-status';
 import { AppError } from '../../utils/AppError';
-import { MilestoneService } from '../milestones/milestone.service';
 import { ModuleService } from '../modules/module.service';
 import { QuizCreatePayload, QuizUpdatePayload } from './quiz.interface';
 import { Quiz } from './quiz.model';
@@ -15,19 +14,8 @@ const getQuizOrThrow = async (quizId: string) => {
   return quiz;
 };
 
-const ensureModuleIsNotFinalMilestone = async (moduleId: string) => {
-  const moduleItem = await ModuleService.getModuleOrThrow(moduleId);
-  const milestone = await MilestoneService.getMilestoneOrThrow(moduleItem.milestone.toString());
-  const lastMilestone = await MilestoneService.getLastMilestone(milestone.course.toString());
-
-  if (lastMilestone?._id.toString() === milestone._id.toString()) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Final milestone must use an assignment instead of a quiz');
-  }
-};
-
 const createQuiz = async (payload: QuizCreatePayload, userId: string) => {
   await ModuleService.ensureModuleOwnership(payload.module, userId);
-  await ensureModuleIsNotFinalMilestone(payload.module);
 
   return Quiz.create(payload);
 };
@@ -49,7 +37,6 @@ const getQuizById = async (quizId: string) => {
 const updateQuiz = async (quizId: string, payload: QuizUpdatePayload, userId: string) => {
   const quiz = await getQuizOrThrow(quizId);
   await ModuleService.ensureModuleOwnership(quiz.module.toString(), userId);
-  await ensureModuleIsNotFinalMilestone(quiz.module.toString());
 
   return Quiz.findByIdAndUpdate(quizId, payload, {
     new: true,

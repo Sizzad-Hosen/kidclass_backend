@@ -31,6 +31,29 @@ export const authenticate: RequestHandler = (req, res, next) => {
   Promise.resolve(authenticateHandler(req, res, next)).catch(next);
 };
 
+const optionalAuthenticateHandler = async (req: Request, _res: Response, next: NextFunction): Promise<void> => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader?.startsWith('Bearer ')) {
+    next();
+    return;
+  }
+
+  const decoded = verifyAccessToken(authHeader.split(' ')[1]);
+  const user = await User.findById(decoded.userId).select('_id role isActive');
+
+  if (!user || !user.isActive) {
+    throw new AppError(401, 'User is not authorized');
+  }
+
+  req.user = { userId: user._id.toString(), role: user.role };
+  next();
+};
+
+export const optionalAuthenticate: RequestHandler = (req, res, next) => {
+  Promise.resolve(optionalAuthenticateHandler(req, res, next)).catch(next);
+};
+
 export const authorize =
   (...roles: UserRole[]) =>
   (req: Request, _res: Response, next: NextFunction): void => {

@@ -23,10 +23,10 @@ if (env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
-app.get('/health', (_req, res) => {
+app.get('/', (_req, res) => {
   res.status(200).json({
     success: true,
-    message: 'KidClass backend is healthy'
+    message: 'KidClass backend ready to serve requests'
   });
 });
 

@@ -1,4 +1,5 @@
 import httpStatus from 'http-status';
+import { Types } from 'mongoose';
 import { Assignment } from '../assignments/assignment.model';
 import { Lesson } from '../lessons/lesson.model';
 import { CourseModule } from '../modules/module.model';
@@ -46,6 +47,10 @@ const getMilestones = async () => {
   return Milestone.find().populate('course', 'title category isPublished').sort({ course: 1, order: 1 });
 };
 
+const getMilestonesByCourseIds = async (courseIds: Types.ObjectId[]) => {
+  return Milestone.find({ course: { $in: courseIds } }).sort({ course: 1, order: 1 });
+};
+
 const getMilestoneById = async (milestoneId: string) => {
   const milestone = await Milestone.findById(milestoneId).populate('course', 'title category isPublished');
 
@@ -90,6 +95,7 @@ const deleteMilestone = async (milestoneId: string, userId: string) => {
 export const MilestoneService = {
   createMilestone,
   getMilestones,
+  getMilestonesByCourseIds,
   getMilestoneById,
   getLastMilestone,
   updateMilestone,

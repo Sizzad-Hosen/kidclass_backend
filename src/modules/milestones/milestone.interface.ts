@@ -8,6 +8,7 @@ export interface IMilestone {
   updatedAt?: Date;
 }
 
+
 export type MilestoneCreatePayload = {
   course: string;
   order: number;
