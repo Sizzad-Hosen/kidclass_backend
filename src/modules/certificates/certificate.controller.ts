@@ -116,6 +116,35 @@ const deleteCertificate = catchAsync(async (req, res) => {
   });
 });
 
+const getCertificateTemplates = catchAsync(async (req, res) => {
+  const result = await CertificateService.getCertificateTemplates(req.user!.role);
+  sendResponse(res, { statusCode: httpStatus.OK, success: true, message: 'Certificate templates fetched successfully', data: result });
+});
+
+const createCertificateTemplate = catchAsync(async (req, res) => {
+  const result = await CertificateService.createCertificateTemplate(req.body, req.user!.userId, req.user!.role);
+  sendResponse(res, { statusCode: httpStatus.CREATED, success: true, message: 'Certificate template created successfully', data: result });
+});
+
+const updateCertificateTemplate = catchAsync(async (req, res) => {
+  const result = await CertificateService.updateCertificateTemplate(req.params.templateId as string, req.body, req.user!.role);
+  sendResponse(res, { statusCode: httpStatus.OK, success: true, message: 'Certificate template updated successfully', data: result });
+});
+
+const deleteCertificateTemplate = catchAsync(async (req, res) => {
+  const result = await CertificateService.deleteCertificateTemplate(req.params.templateId as string, req.user!.role);
+  sendResponse(res, { statusCode: httpStatus.OK, success: true, message: 'Certificate template deleted successfully', data: result });
+});
+
+const publishCertificateTemplate = catchAsync(async (req, res) => {
+  const result = await CertificateService.publishCertificateTemplate(
+    req.params.templateId as string,
+    req.user!.userId,
+    req.user!.role
+  );
+  sendResponse(res, { statusCode: httpStatus.OK, success: true, message: 'Eligible student certificates published successfully', data: result });
+});
+
 export const CertificateController = {
   getCertificates,
   getCertificateById,
@@ -124,5 +153,10 @@ export const CertificateController = {
   verifyCertificate,
   downloadCertificate,
   updateCertificate,
-  deleteCertificate
+  deleteCertificate,
+  getCertificateTemplates,
+  createCertificateTemplate,
+  updateCertificateTemplate,
+  deleteCertificateTemplate,
+  publishCertificateTemplate
 };

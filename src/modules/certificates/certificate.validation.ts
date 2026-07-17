@@ -34,3 +34,27 @@ export const certificateNumberParamValidationSchema = z.object({
     certificateNo: z.string().trim().min(1, 'Certificate number is required')
   })
 });
+
+const templateBodySchema = z.object({
+  title: z.string().trim().min(1, 'Template title is required'),
+  course: objectIdSchema,
+  className: z.string().trim().min(1, 'Class name is required'),
+  subject: z.string().trim().min(1, 'Subject is required'),
+  issuerName: z.string().trim().min(1, 'Issuer name is required'),
+  issuerEmail: z.string().trim().email('A valid issuer email is required')
+});
+
+export const createCertificateTemplateValidationSchema = z.object({
+  body: templateBodySchema
+});
+
+export const updateCertificateTemplateValidationSchema = z.object({
+  params: z.object({ templateId: objectIdSchema }),
+  body: templateBodySchema.partial().refine((body) => Object.keys(body).length > 0, {
+    message: 'At least one field is required'
+  })
+});
+
+export const certificateTemplateIdParamValidationSchema = z.object({
+  params: z.object({ templateId: objectIdSchema })
+});

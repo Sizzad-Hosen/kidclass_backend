@@ -13,6 +13,7 @@ import { Progress } from '../progress/progress.model';
 import { Quiz } from '../quizzes/quiz.model';
 import { QuizResult } from '../quizzes/quizResult.model';
 import { Certificate } from './certificate.model';
+import { CertificateTemplate } from './certificate.model';
 
 const FINAL_ASSIGNMENT_PASSING_PERCENTAGE = 70;
 
@@ -286,6 +287,13 @@ const verifyCertificate = async (certificateNo: string) => {
     certificateNo: certificate.certificateNo,
     issuedAt: certificate.issuedAt,
     certificateUrl: certificate.certificateUrl,
+    recipientName: certificate.recipientName,
+    recipientEmail: certificate.recipientEmail,
+    courseName: certificate.courseName,
+    className: certificate.className,
+    subject: certificate.subject,
+    issuerName: certificate.issuerName,
+    issuerEmail: certificate.issuerEmail,
     status: 'valid',
     enrollment: certificate.enrollment
   };
@@ -311,6 +319,113 @@ const deleteCertificate = async (certificateId: string, userId: string, role: st
   return Certificate.findByIdAndDelete(certificateId);
 };
 
+type CertificateTemplatePayload = {
+  title: string;
+  course: string;
+  className: string;
+  subject: string;
+  issuerName: string;
+  issuerEmail: string;
+};
+
+const ensureTemplateRole = (role: string) => {
+  if (!COURSE_MANAGEMENT_ROLES.includes(role as never)) {
+    throw new AppError(httpStatus.FORBIDDEN, 'You do not have permission to manage certificate templates');
+  }
+};
+
+const getCertificateTemplates = async (role: string) => {
+  ensureTemplateRole(role);
+  return CertificateTemplate.find().populate('course', 'title category isPublished').sort({ updatedAt: -1 });
+};
+
+const createCertificateTemplate = async (
+  payload: CertificateTemplatePayload,
+  userId: string,
+  role: string
+) => {
+  ensureTemplateRole(role);
+  const course = await CourseService.getCourseById(payload.course);
+
+  return CertificateTemplate.create({
+    ...payload,
+    subject: payload.subject || course.category,
+    createdBy: toObjectId(userId)
+  });
+};
+
+const updateCertificateTemplate = async (
+  templateId: string,
+  payload: Partial<CertificateTemplatePayload>,
+  role: string
+) => {
+  ensureTemplateRole(role);
+  if (payload.course) await CourseService.getCourseById(payload.course);
+
+  const template = await CertificateTemplate.findByIdAndUpdate(templateId, payload, {
+    new: true,
+    runValidators: true
+  }).populate('course', 'title category isPublished');
+
+  if (!template) throw new AppError(httpStatus.NOT_FOUND, 'Certificate template not found');
+  return template;
+};
+
+const deleteCertificateTemplate = async (templateId: string, role: string) => {
+  ensureTemplateRole(role);
+  const template = await CertificateTemplate.findByIdAndDelete(templateId);
+  if (!template) throw new AppError(httpStatus.NOT_FOUND, 'Certificate template not found');
+  return template;
+};
+
+const publishCertificateTemplate = async (templateId: string, userId: string, role: string) => {
+  ensureTemplateRole(role);
+  const template = await CertificateTemplate.findById(templateId);
+  if (!template) throw new AppError(httpStatus.NOT_FOUND, 'Certificate template not found');
+
+  const course = await CourseService.getCourseById(template.course.toString());
+  if (!course.isPublished) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'The selected course must be published first');
+  }
+
+  const enrollments = await Enrollment.find({ course: template.course, status: { $ne: 'cancelled' } })
+    .populate('student', 'name email');
+  let eligible = 0;
+  let published = 0;
+  let alreadyPublished = 0;
+
+  for (const enrollment of enrollments) {
+    const result = await buildEligibility(enrollment._id.toString(), userId, role);
+    if (!result.eligible || result.completionPercentage !== 100) continue;
+    eligible += 1;
+
+    const exists = await Certificate.exists({ enrollment: enrollment._id });
+    if (exists) {
+      alreadyPublished += 1;
+      continue;
+    }
+
+    const student = enrollment.student as unknown as { name?: string; email?: string };
+    await Certificate.create({
+      enrollment: enrollment._id,
+      template: template._id,
+      certificateNo: `KC-${enrollment._id.toString().slice(-8).toUpperCase()}-${Date.now()}-${published}`,
+      issuedAt: new Date(),
+      recipientName: student.name,
+      recipientEmail: student.email,
+      courseName: course.title,
+      className: template.className,
+      subject: template.subject,
+      issuerName: template.issuerName,
+      issuerEmail: template.issuerEmail
+    });
+    await Enrollment.findByIdAndUpdate(enrollment._id, { status: 'completed', completedAt: new Date() });
+    published += 1;
+  }
+
+  return { totalEnrollments: enrollments.length, eligible, published, alreadyPublished };
+};
+
 export const CertificateService = {
   getCertificates,
   getCertificateById,
@@ -318,5 +433,10 @@ export const CertificateService = {
   generateCertificate,
   verifyCertificate,
   updateCertificate,
-  deleteCertificate
+  deleteCertificate,
+  getCertificateTemplates,
+  createCertificateTemplate,
+  updateCertificateTemplate,
+  deleteCertificateTemplate,
+  publishCertificateTemplate
 };
