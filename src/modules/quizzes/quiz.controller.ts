@@ -36,6 +36,33 @@ const getQuizById = catchAsync(async (req, res) => {
   });
 });
 
+const getPublicQuiz = catchAsync(async (req, res) => {
+  const result = await QuizService.getPublicQuiz(req.params.quizId as string);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Quiz fetched successfully',
+    data: result
+  });
+});
+
+const submitPublicQuiz = catchAsync(async (req, res) => {
+  const studentId = req.user?.role === 'student' ? req.user.userId : undefined;
+  const result = await QuizService.submitPublicQuiz(
+    req.params.quizId as string,
+    req.body.answers,
+    studentId
+  );
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Quiz submitted successfully',
+    data: result
+  });
+});
+
 const updateQuiz = catchAsync(async (req, res) => {
   const result = await QuizService.updateQuiz(req.params.quizId as string, req.body, req.user!.userId);
 
@@ -62,6 +89,8 @@ export const QuizController = {
   createQuiz,
   getQuizzes,
   getQuizById,
+  getPublicQuiz,
+  submitPublicQuiz,
   updateQuiz,
   deleteQuiz
 };

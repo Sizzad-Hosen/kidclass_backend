@@ -46,3 +46,12 @@ export const quizIdParamValidationSchema = z.object({
     quizId: objectIdSchema
   })
 });
+
+export const submitQuizValidationSchema = z.object({
+  params: z.object({
+    quizId: objectIdSchema
+  }),
+  body: z.object({
+    answers: z.array(z.number().int().min(0, 'Answer option index cannot be negative'))
+  })
+});

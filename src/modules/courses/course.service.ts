@@ -134,6 +134,18 @@ const getCourseStructure = async (courseId: string, publishedOnly = false) => {
     Quiz.find({ module: { $in: moduleIds } }).sort({ createdAt: 1 }),
     Assignment.find({ milestone: { $in: milestoneIds } }).sort({ createdAt: 1 })
   ]);
+  const serializeQuiz = (quiz: (typeof quizzes)[number]) => {
+    if (!publishedOnly) return quiz.toObject();
+
+    return {
+      ...quiz.toObject(),
+      questions: quiz.questions.map((question) => ({
+        questionText: question.questionText,
+        points: question.points,
+        options: question.options.map((option) => ({ text: option.text }))
+      }))
+    };
+  };
 
   return {
     course,
@@ -144,7 +156,9 @@ const getCourseStructure = async (courseId: string, publishedOnly = false) => {
         .map((moduleItem) => ({
           ...moduleItem.toObject(),
           lessons: lessons.filter((lesson) => lesson.module.toString() === moduleItem._id.toString()),
-          quizzes: quizzes.filter((quiz) => quiz.module.toString() === moduleItem._id.toString())
+          quizzes: quizzes
+            .filter((quiz) => quiz.module.toString() === moduleItem._id.toString())
+            .map(serializeQuiz)
         })),
       assignments: assignments.filter((assignment) => assignment.milestone.toString() === milestone._id.toString())
     }))
