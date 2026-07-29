@@ -1,5 +1,6 @@
 import httpStatus from 'http-status';
 import { Types } from 'mongoose';
+import PDFDocument from 'pdfkit';
 import { AppError } from '../../utils/AppError';
 import { Assignment } from '../assignments/assignment.model';
 import { AssignmentSubmission } from '../assignments/assignmentSubmission.model';
@@ -12,6 +13,7 @@ import { CourseModule } from '../modules/module.model';
 import { Progress } from '../progress/progress.model';
 import { Quiz } from '../quizzes/quiz.model';
 import { QuizResult } from '../quizzes/quizResult.model';
+import { User } from '../users/user.model';
 import { Certificate } from './certificate.model';
 import { CertificateTemplate } from './certificate.model';
 
@@ -108,29 +110,7 @@ const buildEligibility = async (enrollmentId: string, userId: string, role: stri
     finalAssignmentPercentage !== null &&
     finalAssignmentPercentage >= FINAL_ASSIGNMENT_PASSING_PERCENTAGE;
 
-  const totalRequirements = lessonIds.length + quizIds.length + (finalAssignment ? 1 : 0);
-  const completedRequirements =
-    completedLessons + passedQuizIds.size + (finalAssignmentPassed ? 1 : 0);
-
   const missingRequirements = [];
-
-  if (completedLessons < lessonIds.length) {
-    missingRequirements.push({
-      type: 'lesson',
-      completed: completedLessons,
-      required: lessonIds.length,
-      message: 'Complete all lessons'
-    });
-  }
-
-  if (passedQuizIds.size < quizIds.length) {
-    missingRequirements.push({
-      type: 'quiz',
-      completed: passedQuizIds.size,
-      required: quizIds.length,
-      message: 'Pass all milestone quizzes'
-    });
-  }
 
   if (!finalAssignment) {
     missingRequirements.push({
@@ -152,9 +132,8 @@ const buildEligibility = async (enrollmentId: string, userId: string, role: stri
 
   return {
     enrollment,
-    eligible: missingRequirements.length === 0 && totalRequirements > 0,
-    completionPercentage:
-      totalRequirements === 0 ? 0 : Math.round((completedRequirements / totalRequirements) * 100),
+    eligible: finalAssignmentPassed,
+    completionPercentage: finalAssignmentPassed ? 100 : 0,
     requirements: {
       lessons: {
         completed: completedLessons,
@@ -181,6 +160,57 @@ const getCertificateEligibility = async (enrollmentId: string, userId: string, r
   return eligibility;
 };
 
+const issueCertificateForEnrollment = async (
+  enrollmentId: string | Types.ObjectId,
+  templateId: string | Types.ObjectId
+) => {
+  const existing = await Certificate.findOne({ enrollment: enrollmentId });
+  if (existing) return existing;
+
+  const [enrollment, template] = await Promise.all([
+    Enrollment.findById(enrollmentId),
+    CertificateTemplate.findById(templateId)
+  ]);
+
+  if (!enrollment) throw new AppError(httpStatus.NOT_FOUND, 'Enrollment not found');
+  if (!template?.isPublished) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'A published certificate template is required');
+  }
+
+  const [course, student] = await Promise.all([
+    CourseService.getCourseById(enrollment.course.toString()),
+    User.findById(enrollment.student).select('name email')
+  ]);
+
+  if (!course.isPublished) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Course must be published before certificate generation');
+  }
+  if (!student) throw new AppError(httpStatus.NOT_FOUND, 'Student not found');
+
+  const certificate = await Certificate.create({
+    enrollment: enrollment._id,
+    template: template._id,
+    certificateNo: `KC-${enrollment._id.toString().slice(-8).toUpperCase()}-${Date.now()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`,
+    issuedAt: new Date(),
+    recipientName: student.name,
+    recipientEmail: student.email,
+    courseName: course.title,
+    className: template.className,
+    subject: template.subject,
+    issuerName: template.issuerName,
+    issuerEmail: template.issuerEmail
+  });
+
+  if (enrollment.status !== 'completed') {
+    await Enrollment.findByIdAndUpdate(enrollment._id, {
+      status: 'completed',
+      completedAt: new Date()
+    });
+  }
+
+  return certificate;
+};
+
 const generateCertificate = async (enrollmentId: string, userId: string, role: string) => {
   const { enrollment, ...eligibility } = await buildEligibility(enrollmentId, userId, role);
 
@@ -194,25 +224,16 @@ const generateCertificate = async (enrollmentId: string, userId: string, role: s
     throw new AppError(httpStatus.BAD_REQUEST, 'Course must be published before certificate generation');
   }
 
-  const existingCertificate = await Certificate.findOne({ enrollment: enrollment._id });
+  const template = await CertificateTemplate.findOne({
+    course: enrollment.course,
+    isPublished: true
+  }).sort({ publishedAt: -1 });
 
-  if (existingCertificate) {
-    throw new AppError(httpStatus.CONFLICT, 'Certificate has already been issued for this enrollment');
+  if (!template) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'The course certificate template is not published yet');
   }
 
-  const certificateNo = `KC-${enrollment._id.toString().slice(-8).toUpperCase()}-${Date.now()}`;
-  const certificate = await Certificate.create({
-    enrollment: toObjectId(enrollment._id),
-    certificateNo,
-    issuedAt: new Date()
-  });
-
-  if (enrollment.status !== 'completed') {
-    await Enrollment.findByIdAndUpdate(enrollment._id, {
-      status: 'completed',
-      completedAt: new Date()
-    });
-  }
+  const certificate = await issueCertificateForEnrollment(enrollment._id, template._id);
 
   return {
     certificate,
@@ -220,8 +241,46 @@ const generateCertificate = async (enrollmentId: string, userId: string, role: s
   };
 };
 
+const issueCertificateForFinalAssignment = async (assignmentId: string, studentId: string) => {
+  const assignment = await Assignment.findById(assignmentId).select('milestone');
+  if (!assignment) return null;
+
+  const milestone = await Milestone.findById(assignment.milestone).select('course');
+  if (!milestone) return null;
+
+  const finalMilestone = await Milestone.findOne({ course: milestone.course })
+    .sort({ order: -1 })
+    .select('_id');
+  if (!finalMilestone || finalMilestone._id.toString() !== milestone._id.toString()) return null;
+
+  const submission = await AssignmentSubmission.findOne({
+    assignment: assignmentId,
+    student: studentId
+  }).select('score totalPoints passed');
+  const percentage =
+    submission?.score !== undefined && submission.totalPoints
+      ? (submission.score / submission.totalPoints) * 100
+      : 0;
+  if (!submission?.passed || percentage < FINAL_ASSIGNMENT_PASSING_PERCENTAGE) return null;
+
+  const [enrollment, template] = await Promise.all([
+    Enrollment.findOne({
+      course: milestone.course,
+      student: studentId,
+      status: { $ne: 'cancelled' }
+    }),
+    CertificateTemplate.findOne({
+      course: milestone.course,
+      isPublished: true
+    }).sort({ publishedAt: -1 })
+  ]);
+  if (!enrollment || !template) return null;
+
+  return issueCertificateForEnrollment(enrollment._id, template._id);
+};
+
 const getCertificates = async (userId: string, role: string) => {
-  if (role === 'admin') {
+  if (COURSE_MANAGEMENT_ROLES.includes(role as never)) {
     return Certificate.find()
       .populate({
         path: 'enrollment',
@@ -268,6 +327,107 @@ const getCertificateById = async (certificateId: string, userId: string, role: s
   }
 
   return certificate;
+};
+
+const createCertificatePdf = async (certificateId: string, userId: string, role: string) => {
+  const certificate = await getCertificateById(certificateId, userId, role);
+  const enrollment = certificate.enrollment as unknown as {
+    student?: { name?: string; email?: string };
+    course?: { title?: string; category?: string };
+  };
+  const recipientName = certificate.recipientName ?? enrollment.student?.name ?? 'KidClass Student';
+  const courseName = certificate.courseName ?? enrollment.course?.title ?? 'KidClass Course';
+  const subject = certificate.subject ?? enrollment.course?.category ?? 'Learning';
+
+  return new Promise<Buffer>((resolve, reject) => {
+    const document = new PDFDocument({
+      size: 'A4',
+      layout: 'landscape',
+      margin: 44,
+      info: {
+        Title: `${courseName} Certificate`,
+        Author: certificate.issuerName ?? 'KidClass'
+      }
+    });
+    const chunks: Buffer[] = [];
+    document.on('data', (chunk: Buffer) => chunks.push(chunk));
+    document.on('end', () => resolve(Buffer.concat(chunks)));
+    document.on('error', reject);
+
+    const pageWidth = document.page.width;
+    const pageHeight = document.page.height;
+    document
+      .lineWidth(5)
+      .strokeColor('#D6A928')
+      .rect(24, 24, pageWidth - 48, pageHeight - 48)
+      .stroke();
+    document
+      .lineWidth(1.5)
+      .strokeColor('#14698D')
+      .rect(34, 34, pageWidth - 68, pageHeight - 68)
+      .stroke();
+
+    document
+      .fillColor('#14698D')
+      .font('Helvetica-Bold')
+      .fontSize(18)
+      .text('KIDCLASS', 0, 72, { align: 'center' });
+    document
+      .fillColor('#111827')
+      .font('Times-Bold')
+      .fontSize(36)
+      .text('Certificate of Completion', 70, 116, { align: 'center', width: pageWidth - 140 });
+    document
+      .fillColor('#64748B')
+      .font('Helvetica')
+      .fontSize(14)
+      .text('This certificate is proudly presented to', 0, 190, { align: 'center' });
+    document
+      .fillColor('#0D6386')
+      .font('Times-Bold')
+      .fontSize(32)
+      .text(recipientName, 90, 225, { align: 'center', width: pageWidth - 180 });
+    document
+      .fillColor('#334155')
+      .font('Helvetica')
+      .fontSize(15)
+      .text(`for successfully completing ${courseName}`, 90, 285, {
+        align: 'center',
+        width: pageWidth - 180
+      });
+    document
+      .font('Helvetica-Bold')
+      .fontSize(13)
+      .text(
+        [certificate.className, subject].filter(Boolean).join('  •  '),
+        90,
+        320,
+        { align: 'center', width: pageWidth - 180 }
+      );
+    document
+      .font('Helvetica')
+      .fontSize(11)
+      .fillColor('#475569')
+      .text(`Issued: ${certificate.issuedAt.toLocaleDateString()}`, 75, 410)
+      .text(`Certificate No: ${certificate.certificateNo}`, 75, 432);
+    document
+      .font('Helvetica-Bold')
+      .fontSize(13)
+      .fillColor('#111827')
+      .text(certificate.issuerName ?? 'KidClass', pageWidth - 300, 410, {
+        align: 'center',
+        width: 220
+      });
+    document
+      .font('Helvetica')
+      .fontSize(10)
+      .fillColor('#64748B')
+      .text(certificate.issuerEmail ?? 'Authorized issuer', pageWidth - 300, 432, {
+        align: 'center',
+        width: 220
+      });
+    document.end();
+  });
 };
 
 const verifyCertificate = async (certificateNo: string) => {
@@ -388,6 +548,14 @@ const publishCertificateTemplate = async (templateId: string, userId: string, ro
     throw new AppError(httpStatus.BAD_REQUEST, 'The selected course must be published first');
   }
 
+  await CertificateTemplate.updateMany(
+    { course: template.course, _id: { $ne: template._id } },
+    { isPublished: false, $unset: { publishedAt: 1 } }
+  );
+  template.isPublished = true;
+  template.publishedAt = new Date();
+  await template.save();
+
   const enrollments = await Enrollment.find({ course: template.course, status: { $ne: 'cancelled' } })
     .populate('student', 'name email');
   let eligible = 0;
@@ -396,7 +564,7 @@ const publishCertificateTemplate = async (templateId: string, userId: string, ro
 
   for (const enrollment of enrollments) {
     const result = await buildEligibility(enrollment._id.toString(), userId, role);
-    if (!result.eligible || result.completionPercentage !== 100) continue;
+    if (!result.eligible) continue;
     eligible += 1;
 
     const exists = await Certificate.exists({ enrollment: enrollment._id });
@@ -405,30 +573,24 @@ const publishCertificateTemplate = async (templateId: string, userId: string, ro
       continue;
     }
 
-    const student = enrollment.student as unknown as { name?: string; email?: string };
-    await Certificate.create({
-      enrollment: enrollment._id,
-      template: template._id,
-      certificateNo: `KC-${enrollment._id.toString().slice(-8).toUpperCase()}-${Date.now()}-${published}`,
-      issuedAt: new Date(),
-      recipientName: student.name,
-      recipientEmail: student.email,
-      courseName: course.title,
-      className: template.className,
-      subject: template.subject,
-      issuerName: template.issuerName,
-      issuerEmail: template.issuerEmail
-    });
-    await Enrollment.findByIdAndUpdate(enrollment._id, { status: 'completed', completedAt: new Date() });
+    await issueCertificateForEnrollment(enrollment._id, template._id);
     published += 1;
   }
 
-  return { totalEnrollments: enrollments.length, eligible, published, alreadyPublished };
+  return {
+    templateId: template._id,
+    isPublished: true,
+    totalEnrollments: enrollments.length,
+    eligible,
+    published,
+    alreadyPublished
+  };
 };
 
 export const CertificateService = {
   getCertificates,
   getCertificateById,
+  createCertificatePdf,
   getCertificateEligibility,
   generateCertificate,
   verifyCertificate,
@@ -438,5 +600,6 @@ export const CertificateService = {
   createCertificateTemplate,
   updateCertificateTemplate,
   deleteCertificateTemplate,
-  publishCertificateTemplate
+  publishCertificateTemplate,
+  issueCertificateForFinalAssignment
 };

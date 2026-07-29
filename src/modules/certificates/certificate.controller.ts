@@ -71,18 +71,20 @@ const verifyCertificate = catchAsync(async (req, res) => {
 });
 
 const downloadCertificate = catchAsync(async (req, res) => {
-  const result = await CertificateService.getCertificateById(
+  const result = await CertificateService.createCertificatePdf(
     req.params.certificateId as string,
     req.user!.userId,
     req.user!.role
   );
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Certificate download details fetched successfully',
-    data: result
-  });
+  res
+    .status(httpStatus.OK)
+    .set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="kidclass-certificate-${req.params.certificateId}.pdf"`,
+      'Content-Length': result.length.toString()
+    })
+    .send(result);
 });
 
 const updateCertificate = catchAsync(async (req, res) => {

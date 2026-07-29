@@ -23,6 +23,8 @@ export interface ICertificateTemplate {
   issuerName: string;
   issuerEmail: string;
   createdBy: Types.ObjectId;
+  isPublished: boolean;
+  publishedAt?: Date;
 }
 
 const certificateSchema = new Schema<ICertificate>(
@@ -53,7 +55,9 @@ const certificateTemplateSchema = new Schema<ICertificateTemplate>(
     subject: { type: String, required: true, trim: true },
     issuerName: { type: String, required: true, trim: true },
     issuerEmail: { type: String, required: true, trim: true, lowercase: true },
-    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true }
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    isPublished: { type: Boolean, default: false },
+    publishedAt: { type: Date }
   },
   { timestamps: true, versionKey: false }
 );

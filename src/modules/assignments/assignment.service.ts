@@ -206,7 +206,7 @@ const submitAssignment = async (
   const totalPoints = isQuizOnly ? quizResult?.quizTotalPoints : undefined;
   const percentage = score !== undefined && totalPoints ? (score / totalPoints) * 100 : 0;
 
-  return AssignmentSubmission.findOneAndUpdate(
+  const submission = await AssignmentSubmission.findOneAndUpdate(
     { assignment: assignmentId, student: studentId },
     {
       assignment: assignmentId,
@@ -223,6 +223,13 @@ const submitAssignment = async (
     },
     { new: true, upsert: true, runValidators: true }
   );
+
+  if (submission.passed) {
+    const { CertificateService } = await import('../certificates/certificate.service');
+    await CertificateService.issueCertificateForFinalAssignment(assignmentId, studentId);
+  }
+
+  return submission;
 };
 
 const gradeAssignmentSubmission = async (
@@ -237,7 +244,7 @@ const gradeAssignmentSubmission = async (
 
   const percentage = (payload.score / payload.totalPoints) * 100;
 
-  return AssignmentSubmission.findOneAndUpdate(
+  const submission = await AssignmentSubmission.findOneAndUpdate(
     { assignment: assignmentId, student: studentId },
     {
       assignment: assignmentId,
@@ -249,6 +256,13 @@ const gradeAssignmentSubmission = async (
     },
     { new: true, upsert: true, runValidators: true }
   );
+
+  if (submission.passed) {
+    const { CertificateService } = await import('../certificates/certificate.service');
+    await CertificateService.issueCertificateForFinalAssignment(assignmentId, studentId);
+  }
+
+  return submission;
 };
 
 const getAssignmentSubmissions = async (assignmentId: string, userId: string) => {
