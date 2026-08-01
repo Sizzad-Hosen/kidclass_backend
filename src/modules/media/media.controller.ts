@@ -28,6 +28,7 @@ const getMedia = catchAsync(async (req, res, next) => {
   res.setHeader('Accept-Ranges', 'bytes');
   res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
   res.setHeader('Content-Type', contentType);
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
   res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(file.filename)}"`);
 
   if (range) {
