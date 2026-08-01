@@ -4,7 +4,7 @@ import { sendResponse } from '../../utils/sendResponse';
 import { CourseService } from './course.service';
 
 const createCourse = catchAsync(async (req, res) => {
-  const result = await CourseService.createCourse(req.body, req.user!.userId);
+  const result = await CourseService.createCourse(req.body, req.user!.userId, req.file);
 
   sendResponse(res, {
     statusCode: httpStatus.CREATED,
@@ -15,7 +15,9 @@ const createCourse = catchAsync(async (req, res) => {
 });
 
 const getCourses = catchAsync(async (_req, res) => {
-  const result = await CourseService.getPublishedCourses();
+  const result = _req.user && ['admin', 'super_admin'].includes(_req.user.role)
+    ? await CourseService.getCourses()
+    : await CourseService.getPublishedCourses();
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -26,7 +28,9 @@ const getCourses = catchAsync(async (_req, res) => {
 });
 
 const getCourseById = catchAsync(async (req, res) => {
-  const result = await CourseService.getPublishedCourseById(req.params.courseId as string);
+  const result = req.user && ['admin', 'super_admin'].includes(req.user.role)
+    ? await CourseService.getCourseById(req.params.courseId as string)
+    : await CourseService.getPublishedCourseById(req.params.courseId as string);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -37,7 +41,8 @@ const getCourseById = catchAsync(async (req, res) => {
 });
 
 const getCourseStructure = catchAsync(async (req, res) => {
-  const result = await CourseService.getCourseStructure(req.params.courseId as string, true);
+  const publishedOnly = !req.user || !['admin', 'super_admin'].includes(req.user.role);
+  const result = await CourseService.getCourseStructure(req.params.courseId as string, publishedOnly);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -48,7 +53,8 @@ const getCourseStructure = catchAsync(async (req, res) => {
 });
 
 const getCourseDetails = catchAsync(async (req, res) => {
-  const result = await CourseService.getCourseStructure(req.params.courseId as string, true);
+  const publishedOnly = !req.user || !['admin', 'super_admin'].includes(req.user.role);
+  const result = await CourseService.getCourseStructure(req.params.courseId as string, publishedOnly);
 
   sendResponse(res, {
     statusCode: httpStatus.OK,
@@ -59,7 +65,12 @@ const getCourseDetails = catchAsync(async (req, res) => {
 });
 
 const updateCourse = catchAsync(async (req, res) => {
-  const result = await CourseService.updateCourse(req.params.courseId as string, req.body, req.user!.userId);
+  const result = await CourseService.updateCourse(
+    req.params.courseId as string,
+    req.body,
+    req.user!.userId,
+    req.file
+  );
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

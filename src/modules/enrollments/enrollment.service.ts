@@ -16,6 +16,15 @@ const createEnrollment = async (courseId: string, studentId: string) => {
     throw new AppError(httpStatus.BAD_REQUEST, 'Course is not published yet');
   }
 
+  const existingEnrollment = await Enrollment.findOne({ student: studentId, course: courseId });
+
+  if (existingEnrollment && existingEnrollment.status !== 'cancelled') {
+    throw new AppError(
+      httpStatus.CONFLICT,
+      `Already enrolled in this course. Enrollment ID: ${existingEnrollment._id}`
+    );
+  }
+
   return Enrollment.findOneAndUpdate(
     { student: studentId, course: courseId },
     {

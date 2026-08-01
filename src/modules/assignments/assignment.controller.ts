@@ -25,6 +25,17 @@ const getAssignments = catchAsync(async (_req, res) => {
   });
 });
 
+const getMyAssignments = catchAsync(async (req, res) => {
+  const result = await AssignmentService.getMyAssignments(req.user!.userId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Student assignments fetched successfully',
+    data: result
+  });
+});
+
 const getAssignmentById = catchAsync(async (req, res) => {
   const result = await AssignmentService.getAssignmentById(req.params.assignmentId as string);
 
@@ -107,6 +118,7 @@ const getAssignmentSubmissions = catchAsync(async (req, res) => {
 export const AssignmentController = {
   createAssignment,
   getAssignments,
+  getMyAssignments,
   getAssignmentById,
   updateAssignment,
   deleteAssignment,

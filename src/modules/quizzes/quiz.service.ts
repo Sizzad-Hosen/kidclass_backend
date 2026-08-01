@@ -1,9 +1,12 @@
 import httpStatus from 'http-status';
 import { AppError } from '../../utils/AppError';
-import { MilestoneService } from '../milestones/milestone.service';
+import { Course } from '../courses/course.model';
+import { Milestone } from '../milestones/milestone.model';
+import { CourseModule } from '../modules/module.model';
 import { ModuleService } from '../modules/module.service';
 import { QuizCreatePayload, QuizUpdatePayload } from './quiz.interface';
 import { Quiz } from './quiz.model';
+import { QuizResult } from './quizResult.model';
 
 const getQuizOrThrow = async (quizId: string) => {
   const quiz = await Quiz.findById(quizId);
@@ -15,19 +18,8 @@ const getQuizOrThrow = async (quizId: string) => {
   return quiz;
 };
 
-const ensureModuleIsNotFinalMilestone = async (moduleId: string) => {
-  const moduleItem = await ModuleService.getModuleOrThrow(moduleId);
-  const milestone = await MilestoneService.getMilestoneOrThrow(moduleItem.milestone.toString());
-  const lastMilestone = await MilestoneService.getLastMilestone(milestone.course.toString());
-
-  if (lastMilestone?._id.toString() === milestone._id.toString()) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Final milestone must use an assignment instead of a quiz');
-  }
-};
-
 const createQuiz = async (payload: QuizCreatePayload, userId: string) => {
   await ModuleService.ensureModuleOwnership(payload.module, userId);
-  await ensureModuleIsNotFinalMilestone(payload.module);
 
   return Quiz.create(payload);
 };
@@ -46,10 +38,88 @@ const getQuizById = async (quizId: string) => {
   return quiz;
 };
 
+const getPublishedQuizOrThrow = async (quizId: string) => {
+  const quiz = await Quiz.findById(quizId);
+
+  if (!quiz) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Quiz not found');
+  }
+
+  const moduleItem = await CourseModule.findById(quiz.module).select('milestone');
+  const milestone = moduleItem
+    ? await Milestone.findById(moduleItem.milestone).select('course')
+    : null;
+  const course = milestone
+    ? await Course.findOne({ _id: milestone.course, isPublished: true }).select('_id')
+    : null;
+
+  if (!course) {
+    throw new AppError(httpStatus.NOT_FOUND, 'Quiz not found');
+  }
+
+  return quiz;
+};
+
+const sanitizePublicQuiz = (quiz: Awaited<ReturnType<typeof getPublishedQuizOrThrow>>) => ({
+  id: quiz._id,
+  title: quiz.title,
+  passingScore: quiz.passingScore,
+  questions: quiz.questions.map((question) => ({
+    questionText: question.questionText,
+    points: question.points,
+    options: question.options.map((option) => ({ text: option.text }))
+  }))
+});
+
+const getPublicQuiz = async (quizId: string) => {
+  const quiz = await getPublishedQuizOrThrow(quizId);
+  return sanitizePublicQuiz(quiz);
+};
+
+const submitPublicQuiz = async (
+  quizId: string,
+  answers: number[],
+  studentId?: string
+) => {
+  const quiz = await getPublishedQuizOrThrow(quizId);
+
+  if (answers.length !== quiz.questions.length) {
+    throw new AppError(httpStatus.BAD_REQUEST, 'Answer every question before submitting');
+  }
+
+  let score = 0;
+  const correctOptionIndexes = quiz.questions.map((question, questionIndex) => {
+    const correctIndex = question.options.findIndex((option) => option.isCorrect);
+    if (answers[questionIndex] === correctIndex) score += question.points;
+    return correctIndex;
+  });
+  const totalPoints = quiz.questions.reduce((total, question) => total + question.points, 0);
+  const scorePercentage = totalPoints ? Math.round((score / totalPoints) * 100) : 0;
+  const passed = scorePercentage >= quiz.passingScore;
+
+  if (studentId) {
+    await QuizResult.create({
+      student: studentId,
+      quiz: quiz._id,
+      score,
+      totalPoints,
+      passed
+    });
+  }
+
+  return {
+    score,
+    totalPoints,
+    scorePercentage,
+    passingScore: quiz.passingScore,
+    passed,
+    correctOptionIndexes
+  };
+};
+
 const updateQuiz = async (quizId: string, payload: QuizUpdatePayload, userId: string) => {
   const quiz = await getQuizOrThrow(quizId);
   await ModuleService.ensureModuleOwnership(quiz.module.toString(), userId);
-  await ensureModuleIsNotFinalMilestone(quiz.module.toString());
 
   return Quiz.findByIdAndUpdate(quizId, payload, {
     new: true,
@@ -68,6 +138,8 @@ export const QuizService = {
   createQuiz,
   getQuizzes,
   getQuizById,
+  getPublicQuiz,
+  submitPublicQuiz,
   updateQuiz,
   deleteQuiz
 };

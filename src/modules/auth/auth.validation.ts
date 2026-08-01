@@ -28,6 +28,18 @@ export const resetPasswordValidationSchema = z.object({
   })
 });
 
+export const changePasswordValidationSchema = z.object({
+  body: z
+    .object({
+      currentPassword: z.string().min(1, 'Current password is required'),
+      newPassword: z.string().min(8, 'New password must be at least 8 characters')
+    })
+    .refine((body) => body.currentPassword !== body.newPassword, {
+      message: 'New password must be different from the current password',
+      path: ['newPassword']
+    })
+});
+
 export const refreshTokenValidationSchema = z.object({
   body: z.object({
     refreshToken: z.string().min(1, 'Refresh token is required')

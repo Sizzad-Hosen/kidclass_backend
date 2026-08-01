@@ -3,6 +3,7 @@ import { authenticate } from '../../middleware/auth';
 import { validateRequest } from '../../middleware/validateRequest';
 import { AuthController } from './auth.controller';
 import {
+  changePasswordValidationSchema,
   forgotPasswordValidationSchema,
   loginValidationSchema,
   refreshTokenValidationSchema,
@@ -16,6 +17,7 @@ router.post('/register', validateRequest(registerValidationSchema), AuthControll
 router.post('/login', validateRequest(loginValidationSchema), AuthController.loginUser);
 router.post('/forgot-password', validateRequest(forgotPasswordValidationSchema), AuthController.forgotPassword);
 router.post('/reset-password', validateRequest(resetPasswordValidationSchema), AuthController.resetPassword);
+router.post('/change-password', authenticate, validateRequest(changePasswordValidationSchema), AuthController.changePassword);
 router.post('/refresh-token', validateRequest(refreshTokenValidationSchema), AuthController.refreshToken);
 router.post('/logout', authenticate, AuthController.logout);
 router.get('/me', authenticate, AuthController.getMe);

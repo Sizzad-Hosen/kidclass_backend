@@ -47,8 +47,20 @@ const getCourseProgressByEnrollment = catchAsync(async (req, res) => {
   });
 });
 
+const getStudentSummary = catchAsync(async (req, res) => {
+  const result = await ProgressService.getStudentSummary(req.user!.userId);
+
+  sendResponse(res, {
+    statusCode: httpStatus.OK,
+    success: true,
+    message: 'Student learning summary fetched successfully',
+    data: result
+  });
+});
+
 export const ProgressController = {
   updateLessonProgress,
   getCourseProgressByCourse,
-  getCourseProgressByEnrollment
+  getCourseProgressByEnrollment,
+  getStudentSummary
 };

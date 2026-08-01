@@ -71,18 +71,20 @@ const verifyCertificate = catchAsync(async (req, res) => {
 });
 
 const downloadCertificate = catchAsync(async (req, res) => {
-  const result = await CertificateService.getCertificateById(
+  const result = await CertificateService.createCertificatePdf(
     req.params.certificateId as string,
     req.user!.userId,
     req.user!.role
   );
 
-  sendResponse(res, {
-    statusCode: httpStatus.OK,
-    success: true,
-    message: 'Certificate download details fetched successfully',
-    data: result
-  });
+  res
+    .status(httpStatus.OK)
+    .set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="kidclass-certificate-${req.params.certificateId}.pdf"`,
+      'Content-Length': result.length.toString()
+    })
+    .send(result);
 });
 
 const updateCertificate = catchAsync(async (req, res) => {
@@ -116,6 +118,35 @@ const deleteCertificate = catchAsync(async (req, res) => {
   });
 });
 
+const getCertificateTemplates = catchAsync(async (req, res) => {
+  const result = await CertificateService.getCertificateTemplates(req.user!.role);
+  sendResponse(res, { statusCode: httpStatus.OK, success: true, message: 'Certificate templates fetched successfully', data: result });
+});
+
+const createCertificateTemplate = catchAsync(async (req, res) => {
+  const result = await CertificateService.createCertificateTemplate(req.body, req.user!.userId, req.user!.role);
+  sendResponse(res, { statusCode: httpStatus.CREATED, success: true, message: 'Certificate template created successfully', data: result });
+});
+
+const updateCertificateTemplate = catchAsync(async (req, res) => {
+  const result = await CertificateService.updateCertificateTemplate(req.params.templateId as string, req.body, req.user!.role);
+  sendResponse(res, { statusCode: httpStatus.OK, success: true, message: 'Certificate template updated successfully', data: result });
+});
+
+const deleteCertificateTemplate = catchAsync(async (req, res) => {
+  const result = await CertificateService.deleteCertificateTemplate(req.params.templateId as string, req.user!.role);
+  sendResponse(res, { statusCode: httpStatus.OK, success: true, message: 'Certificate template deleted successfully', data: result });
+});
+
+const publishCertificateTemplate = catchAsync(async (req, res) => {
+  const result = await CertificateService.publishCertificateTemplate(
+    req.params.templateId as string,
+    req.user!.userId,
+    req.user!.role
+  );
+  sendResponse(res, { statusCode: httpStatus.OK, success: true, message: 'Eligible student certificates published successfully', data: result });
+});
+
 export const CertificateController = {
   getCertificates,
   getCertificateById,
@@ -124,5 +155,10 @@ export const CertificateController = {
   verifyCertificate,
   downloadCertificate,
   updateCertificate,
-  deleteCertificate
+  deleteCertificate,
+  getCertificateTemplates,
+  createCertificateTemplate,
+  updateCertificateTemplate,
+  deleteCertificateTemplate,
+  publishCertificateTemplate
 };

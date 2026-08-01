@@ -6,7 +6,10 @@ import { CertificateController } from './certificate.controller';
 import {
   certificateIdParamValidationSchema,
   certificateNumberParamValidationSchema,
+  certificateTemplateIdParamValidationSchema,
+  createCertificateTemplateValidationSchema,
   enrollmentIdParamValidationSchema,
+  updateCertificateTemplateValidationSchema,
   updateCertificateValidationSchema
 } from './certificate.validation';
 
@@ -20,6 +23,31 @@ router.get(
 
 router.use(authenticate);
 
+router.get('/templates', authorize(...COURSE_MANAGEMENT_ROLES), CertificateController.getCertificateTemplates);
+router.post(
+  '/templates',
+  authorize(...COURSE_MANAGEMENT_ROLES),
+  validateRequest(createCertificateTemplateValidationSchema),
+  CertificateController.createCertificateTemplate
+);
+router.patch(
+  '/templates/:templateId',
+  authorize(...COURSE_MANAGEMENT_ROLES),
+  validateRequest(updateCertificateTemplateValidationSchema),
+  CertificateController.updateCertificateTemplate
+);
+router.delete(
+  '/templates/:templateId',
+  authorize(...COURSE_MANAGEMENT_ROLES),
+  validateRequest(certificateTemplateIdParamValidationSchema),
+  CertificateController.deleteCertificateTemplate
+);
+router.post(
+  '/templates/:templateId/publish',
+  authorize(...COURSE_MANAGEMENT_ROLES),
+  validateRequest(certificateTemplateIdParamValidationSchema),
+  CertificateController.publishCertificateTemplate
+);
 router.get('/', CertificateController.getCertificates);
 router.get(
   '/enrollments/:enrollmentId/eligibility',

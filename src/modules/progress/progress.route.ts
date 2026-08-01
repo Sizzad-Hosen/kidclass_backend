@@ -12,6 +12,8 @@ const router = Router();
 
 router.use(authenticate);
 
+router.get('/me/summary', authorize('student'), ProgressController.getStudentSummary);
+
 router.patch(
   '/lessons/:lessonId',
   authorize('student'),

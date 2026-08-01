@@ -14,6 +14,8 @@ import {
 
 const router = Router();
 
+router.get('/me', authenticate, authorize('student'), AssignmentController.getMyAssignments);
+
 router.post(
   '/:assignmentId/submissions',
   authenticate,

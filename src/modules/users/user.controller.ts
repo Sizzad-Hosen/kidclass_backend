@@ -3,8 +3,14 @@ import { catchAsync } from '../../utils/catchAsync';
 import { sendResponse } from '../../utils/sendResponse';
 import { UserService } from './user.service';
 
-const getUsers = catchAsync(async (_req, res) => {
-  const result = await UserService.getUsers();
+const getUsers = catchAsync(async (req, res) => {
+  const result = await UserService.getUsers({
+    search: typeof req.query.search === 'string' ? req.query.search : undefined,
+    role: typeof req.query.role === 'string' ? req.query.role : undefined,
+    status: typeof req.query.status === 'string' ? req.query.status : undefined,
+    page: typeof req.query.page === 'string' ? req.query.page : undefined,
+    limit: typeof req.query.limit === 'string' ? req.query.limit : undefined
+  });
 
   sendResponse(res, {
     statusCode: httpStatus.OK,

@@ -1,6 +1,10 @@
 import httpStatus from 'http-status';
 import { UploadApiResponse } from 'cloudinary';
+import { randomUUID } from 'crypto';
+import { mkdir, writeFile } from 'fs/promises';
+import path from 'path';
 import { cloudinary } from '../../config/cloudinary';
+import { env } from '../../config/env';
 import { AppError } from '../../utils/AppError';
 import { ModuleService } from '../modules/module.service';
 import { LessonCreatePayload, LessonUpdatePayload } from './lesson.interface';
@@ -16,6 +20,16 @@ const getLessonOrThrow = async (lessonId: string) => {
   return lesson;
 };
 
+const saveLessonVideoLocally = async (file: Express.Multer.File) => {
+  const extension = path.extname(file.originalname).toLowerCase() || '.video';
+  const filename = `${randomUUID()}${extension}`;
+  const uploadDirectory = path.resolve(process.cwd(), 'uploads', 'lesson-videos');
+  await mkdir(uploadDirectory, { recursive: true });
+  await writeFile(path.join(uploadDirectory, filename), file.buffer);
+  const baseUrl = (env.PUBLIC_BASE_URL ?? `http://localhost:${env.PORT}`).replace(/\/$/, '');
+  return `${baseUrl}/uploads/lesson-videos/${filename}`;
+};
+
 const uploadLessonVideo = async (file?: Express.Multer.File) => {
   if (!file) {
     return undefined;
@@ -25,25 +39,30 @@ const uploadLessonVideo = async (file?: Express.Multer.File) => {
     throw new AppError(httpStatus.BAD_REQUEST, 'Only video files are allowed for lesson video upload');
   }
 
-  if (!cloudinary.config().cloud_name) {
-    throw new AppError(httpStatus.BAD_REQUEST, 'Cloudinary is not configured for video uploads');
+  if (env.NODE_ENV === 'production' && cloudinary.config().cloud_name) {
+    try {
+      return await new Promise<string>((resolve, reject) => {
+        const uploadStream = cloudinary.uploader.upload_stream(
+          { folder: 'kidclass/lessons/videos', resource_type: 'video' },
+          (error, result?: UploadApiResponse) => {
+            if (error || !result) {
+              reject(error);
+              return;
+            }
+
+            resolve(result.secure_url);
+          }
+        );
+
+        uploadStream.end(file.buffer);
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Cloudinary upload failed';
+      console.warn(`Lesson video cloud upload unavailable; using local storage. ${message}`);
+    }
   }
 
-  return new Promise<string>((resolve, reject) => {
-    const uploadStream = cloudinary.uploader.upload_stream(
-      { folder: 'kidclass/lessons/videos', resource_type: 'video' },
-      (error, result?: UploadApiResponse) => {
-        if (error || !result) {
-          reject(error);
-          return;
-        }
-
-        resolve(result.secure_url);
-      }
-    );
-
-    uploadStream.end(file.buffer);
-  });
+  return saveLessonVideoLocally(file);
 };
 
 const createLesson = async (payload: LessonCreatePayload, userId: string, file?: Express.Multer.File) => {
