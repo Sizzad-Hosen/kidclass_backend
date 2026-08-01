@@ -3,6 +3,7 @@ import express from 'express';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import path from 'path';
+import { connectDatabase } from './config/database';
 import { env } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
 import { notFound } from './middleware/notFound';
@@ -30,6 +31,15 @@ if (env.NODE_ENV !== 'test') {
   app.use(morgan('dev'));
 }
 
+app.use(async (_req, _res, next) => {
+  try {
+    await connectDatabase();
+    next();
+  } catch (error) {
+    next(error);
+  }
+});
+
 app.get('/', (_req, res) => {
   res.status(200).json({
     success: true,
@@ -40,3 +50,5 @@ app.get('/', (_req, res) => {
 app.use('/api/v1', routes);
 app.use(notFound);
 app.use(errorHandler);
+
+export default app;
